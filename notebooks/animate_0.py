@@ -1,3 +1,9 @@
+"""
+This module simulates line-of-sight communication of two stationary ASVs. 
+The simulation consideres only the heave motion and does not consider the 
+roll, pitch or yaw motions of the ASVs.
+"""
+
 import pathlib
 import sys
 module_dir = pathlib.Path(__file__).parent.resolve()
