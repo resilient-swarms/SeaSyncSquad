@@ -10,9 +10,6 @@ from asv import py_Asv_specification
 # Simulation time step size
 time_step_size = 40 # milli-sec
 
-# Simulation time in seconds
-time_duration = 3*60 # sec
-
 # Sea surface variables
 wave_rand_seed = 1
 
