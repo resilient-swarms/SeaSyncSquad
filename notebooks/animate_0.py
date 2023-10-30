@@ -1,6 +1,6 @@
 """
 This module simulates line-of-sight communication of two stationary ASVs. 
-The simulation consideres only the heave motion and does not consider the 
+The simulation considers only the heave motion and does not consider the 
 roll, pitch or yaw motions of the ASVs.
 """
 
@@ -59,7 +59,7 @@ offsets.append(line.length)
 # Antenna 
 antenna_height = 1.0 # m
 
-# Create animated plot
+# Initialise animated plot
 fig, ax = plt.subplots()
 ax.set_ylim(-2.0, 2.0)
 # ax.grid(True)
@@ -92,7 +92,7 @@ def animate(i):
     line_of_sight.set_color("green" if is_signal_path_clear else "red") # Chage color if signal path not clear
     return wave_profile, antenna_1, antenna_2, line_of_sight
 
-# Start simulation
+# Start simulation and animation
 ani = animation.FuncAnimation(
     fig, animate, interval=time_step_size, blit=True, save_count=50)
 
