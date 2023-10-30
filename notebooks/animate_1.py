@@ -1,7 +1,5 @@
 """
-This module simulates line-of-sight communication of two stationary ASVs. 
-In addition to considering heave motion, this simulation also considers 
-roll, pitch or yaw motions of the ASVs.
+This module simulates line-of-sight communication of two non-stationary ASVs. 
 """
 
 import pathlib
@@ -75,9 +73,9 @@ ax1.set_ylim(-2.0, 2.0)
 # ax1.grid(True)
 # ax1.set_aspect('equal', adjustable='box')
 # Actors
-wave_profile, = ax1.plot(offsets, [0]*len(points), color="blue") # Draw the sea surface between the two points
-antenna_1, = ax1.plot([0, 0], [0,antenna_height], color="brown") # Draw the antenna at p1
-antenna_2, = ax1.plot([offsets[-1], offsets[-1]], [0,antenna_height], color="brown") # Draw the antenna at p2
+wave_profile, = ax1.plot(offsets, [0]*len(points), color="cornflowerblue") # Draw the sea surface between the two points
+antenna_1, = ax1.plot([0, 0], [0,antenna_height], color="grey") # Draw the antenna at p1
+antenna_2, = ax1.plot([offsets[-1], offsets[-1]], [0,antenna_height], color="grey") # Draw the antenna at p2
 line_of_sight, = ax1.plot([0, offsets[-1]], [antenna_height, antenna_height], color="green", linestyle='--') # Draw the line connecting the tips of two antennas
 ax1.set_title("Signal path between antennas on ASV-1 and ASV-2")
 ax1.text(0, -wave_hs, "| ASV-1", ha='left', va='top')
@@ -85,22 +83,28 @@ ax1.text(offsets[-1], -wave_hs, "ASV-2 |", ha='right', va='top')
 green_patch = mpatches.Patch(color='green', label='Signal clear')
 red_patch = mpatches.Patch(color='red', label='Signal interrupted')
 ax1.legend(handles=[green_patch, red_patch], loc="lower center")
+ax1.set_xlabel("Distance along the line joining the two ASVs (m)")
+ax1.set_ylabel("Z (m)")
 # Top view - 1
 ax2 = plt.subplot(221)
 asv1_x = [position_1.x,]
 asv1_y = [position_1.y,]
-asv1_path, = ax2.plot(asv1_x, asv1_y)
+asv1_path, = ax2.plot(asv1_x, asv1_y, color="grey")
 ax2.set_xlim(min(asv1_x) - 2, max(asv1_x) + 2)
 ax2.set_ylim(min(asv1_y) - 2, max(asv1_y) + 2)
 ax2.set_title("Path of ASV-1")
+ax2.set_xlabel("X (m)")
+ax2.set_ylabel("Y (m)")
 # Top view - 2
 ax3 = plt.subplot(222)
 asv2_x = [position_2.x,]
 asv2_y = [position_2.y,]
-asv2_path, = ax3.plot(asv2_x, asv2_y)
+asv2_path, = ax3.plot(asv2_x, asv2_y, color="grey")
 ax3.set_xlim(min(asv2_x) - 2, max(asv2_x) + 2)
 ax3.set_ylim(min(asv2_y) - 2, max(asv2_y) + 2)
 ax3.set_title("Path of ASV-2")
+ax3.set_xlabel("X (m)")
+ax3.set_ylabel("Y (m)")
 
 # Update data for each animation step
 time = 0
