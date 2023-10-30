@@ -15,6 +15,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.patches as mpatches
 import numpy as np
 import utils
 from shapely.geometry import Point, LineString
@@ -62,28 +63,49 @@ offsets.append(line.length)
 start_attitude = py_Coordinates_3D(0.0, 0.0, 0.0) # Both ASVs will have the same initial attitude
 asv_1 = py_Asv(utils.asv_spec, sea_surface, position_1, start_attitude)
 asv_2 = py_Asv(utils.asv_spec, sea_surface, position_2, start_attitude)
-# Ensure the ASVs does not surge or sway
-asv_1.py_set_surge_sway_halt(True)
-asv_2.py_set_surge_sway_halt(True)
 
 # Antenna 
 antenna_height = 1.0 # m
 
 # Initialise animated plot
+# Side view
 fig, ax = plt.subplots()
-ax.set_ylim(-2.0, 2.0)
-# ax.grid(True)
-# ax.set_aspect('equal', adjustable='box')
+ax1 = plt.subplot(212)
+ax1.set_ylim(-2.0, 2.0)
+# ax1.grid(True)
+# ax1.set_aspect('equal', adjustable='box')
 # Actors
-wave_profile, = ax.plot(offsets, [0]*len(points), color="blue") # Draw the sea surface between the two points
-antenna_1, = ax.plot([0, 0], [0,antenna_height], color="brown") # Draw the antenna at p1
-antenna_2, = ax.plot([offsets[-1], offsets[-1]], [0,antenna_height], color="brown") # Draw the antenna at p2
-line_of_sight, = ax.plot([0, offsets[-1]], [antenna_height, antenna_height], color="green", linestyle='--') # Draw the line connecting the tips of two antennas
+wave_profile, = ax1.plot(offsets, [0]*len(points), color="blue") # Draw the sea surface between the two points
+antenna_1, = ax1.plot([0, 0], [0,antenna_height], color="brown") # Draw the antenna at p1
+antenna_2, = ax1.plot([offsets[-1], offsets[-1]], [0,antenna_height], color="brown") # Draw the antenna at p2
+line_of_sight, = ax1.plot([0, offsets[-1]], [antenna_height, antenna_height], color="green", linestyle='--') # Draw the line connecting the tips of two antennas
+ax1.set_title("Signal path between antennas on ASV-1 and ASV-2")
+ax1.text(0, -wave_hs, "| ASV-1", ha='left', va='top')
+ax1.text(offsets[-1], -wave_hs, "ASV-2 |", ha='right', va='top')
+green_patch = mpatches.Patch(color='green', label='Signal clear')
+red_patch = mpatches.Patch(color='red', label='Signal interrupted')
+ax1.legend(handles=[green_patch, red_patch], loc="lower center")
+# Top view - 1
+ax2 = plt.subplot(221)
+asv1_x = [position_1.x,]
+asv1_y = [position_1.y,]
+asv1_path, = ax2.plot(asv1_x, asv1_y)
+ax2.set_xlim(min(asv1_x) - 2, max(asv1_x) + 2)
+ax2.set_ylim(min(asv1_y) - 2, max(asv1_y) + 2)
+ax2.set_title("Path of ASV-1")
+# Top view - 2
+ax3 = plt.subplot(222)
+asv2_x = [position_2.x,]
+asv2_y = [position_2.y,]
+asv2_path, = ax3.plot(asv2_x, asv2_y)
+ax3.set_xlim(min(asv2_x) - 2, max(asv2_x) + 2)
+ax3.set_ylim(min(asv2_y) - 2, max(asv2_y) + 2)
+ax3.set_title("Path of ASV-2")
 
 # Update data for each animation step
 time = 0
 def animate(i):
-    global time
+    global time, asv1_x, asv1_y, asv2_x, asv2_y
     time += time_step_size/1000
     elevations = []
     wave_pattern = []
@@ -94,8 +116,21 @@ def animate(i):
         wave_pattern.append((offsets[i], elevation))
     wave_pattern = LineString(wave_pattern) # Convert to a line string
     # Update asv dynamics
-    asv_1.py_wg_compute_dynamics(0, time_step_size)
-    asv_2.py_wg_compute_dynamics(0, time_step_size)
+    asv_1.py_wg_compute_dynamics(math.pi/2, time_step_size)
+    asv_2.py_wg_compute_dynamics(math.pi/2, time_step_size)
+    # Draw the paths of the ASVs
+    asv1_position = asv_1.py_get_position_origin()
+    asv2_position = asv_2.py_get_position_origin()
+    asv1_x.append(asv1_position.x)
+    asv1_y.append(asv1_position.y)
+    asv1_path.set_data(asv1_x, asv1_y)
+    ax2.set_xlim(min(asv1_x) - 2, max(asv1_x) + 2)
+    ax2.set_ylim(min(asv1_y) - 2, max(asv1_y) + 2)
+    asv2_x.append(asv2_position.x)
+    asv2_y.append(asv2_position.y)
+    asv2_path.set_data(asv2_x, asv2_y)
+    ax3.set_xlim(min(asv2_x) - 2, max(asv2_x) + 2)
+    ax3.set_ylim(min(asv2_y) - 2, max(asv2_y) + 2)
     # Draw the sea surface
     wave_profile.set_ydata(elevations)  # update the sea surface actor
     # Compute the antenna heights considering roll and pitch of the vehicles
@@ -111,11 +146,11 @@ def animate(i):
     is_signal_path_clear = True if signal_path.intersection(wave_pattern).is_empty else False 
     line_of_sight.set_ydata([z_antenna_1, z_antenna_2]) # Update line of sight
     line_of_sight.set_color("green" if is_signal_path_clear else "red") # Change color if signal path not clear
-    return wave_profile, antenna_1, antenna_2, line_of_sight
+    return wave_profile, antenna_1, antenna_2, line_of_sight, asv1_path, asv2_path
 
 # Start simulation and animation
 ani = animation.FuncAnimation(
-    fig, animate, interval=time_step_size, blit=True, save_count=50)
+    fig, animate, interval=time_step_size, blit=False, save_count=50)
 
 # To save the animation, use e.g.
 #
