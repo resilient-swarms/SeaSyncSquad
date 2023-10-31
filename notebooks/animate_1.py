@@ -120,7 +120,7 @@ ax3.set_xlabel("X (m)")
 ax3.set_ylabel("Y (m)")
 # Show signal stats in a box
 props = dict(boxstyle='square', edgecolor="black", linewidth=0.5, facecolor='lightyellow') # these are matplotlib.patch.Patch properties
-signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear signal percentage = {:.2f} % "
+signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear signal window ratio = {:.2f} "
 signal_stats = plt.text(0.5, 0.02, signal_stats_string.format(0, 0, 0), transform=plt.gcf().transFigure, bbox=props, ha="center")
 
 current_signal_length = 0
@@ -188,7 +188,7 @@ def animate(i):
         else:
             # Signal window not yet open
             pass
-    clear_line_of_sight_percentage  = ((avg_signal_length * count_signals) + current_signal_length)/time * 100
+    clear_line_of_sight_percentage  = ((avg_signal_length * count_signals) + current_signal_length)/time 
     signal_stats.set_text(signal_stats_string.format(avg_signal_length, max_signal_length, clear_line_of_sight_percentage))
     line_of_sight.set_color("green" if is_signal_path_clear else "red") # Change color if signal path not clear
     text_asv1.set_x(0)
