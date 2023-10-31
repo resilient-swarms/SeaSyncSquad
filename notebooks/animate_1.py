@@ -66,6 +66,9 @@ points, offsets = create_equidistant_points(p1, p2)
 start_attitude = py_Coordinates_3D(0.0, 0.0, 0.0) # Both ASVs will have the same initial attitude
 asv_1 = py_Asv(utils.asv_spec, sea_surface, position_1, start_attitude)
 asv_2 = py_Asv(utils.asv_spec, sea_surface, position_2, start_attitude)
+# Uncomment the below to make the ASVs stationary
+# asv_1.py_set_surge_sway_halt(True)
+# asv_2.py_set_surge_sway_halt(True)
 
 # Antenna 
 antenna_height = 1.0 # m
@@ -115,11 +118,21 @@ ax3.set_ylim(min(asv2_y) - 2, max(asv2_y) + 2)
 ax3.set_title("Path of ASV-2")
 ax3.set_xlabel("X (m)")
 ax3.set_ylabel("Y (m)")
+# Show signal stats in a box
+props = dict(boxstyle='square', edgecolor="black", linewidth=0.5, facecolor='lightyellow') # these are matplotlib.patch.Patch properties
+signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear line of sight percentage = {:.2f} % "
+signal_stats = plt.text(0.5, 0.02, signal_stats_string.format(0, 0, 0), transform=plt.gcf().transFigure, bbox=props, ha="center")
+
+current_signal_length = 0
+max_signal_length = 0
+avg_signal_length = 0
+count_signals = 0
 
 # Update data for each animation step
 time = 0
 def animate(i):
     global time, asv1_x, asv1_y, asv2_x, asv2_y
+    global current_signal_length, max_signal_length, avg_signal_length, count_signals
     time += time_step_size/1000
     elevations = []
     wave_pattern = []
@@ -163,6 +176,20 @@ def animate(i):
     signal_path = LineString([(0, z_antenna_1), (offsets[-1], z_antenna_2)])
     is_signal_path_clear = True if signal_path.intersection(wave_pattern).is_empty else False 
     line_of_sight.set_data([0, offsets[-1]], [z_antenna_1, z_antenna_2]) # Update line of sight
+    if is_signal_path_clear:
+        current_signal_length += time_step_size/1000
+    else:
+        if current_signal_length != 0.0:
+            max_signal_length = current_signal_length if current_signal_length > max_signal_length else max_signal_length
+            total_signal_length = avg_signal_length * count_signals + current_signal_length
+            count_signals += 1
+            avg_signal_length = total_signal_length / count_signals
+            current_signal_length = 0.0
+        else:
+            # Signal window not yet open
+            pass
+    clear_line_of_sight_percentage  = ((avg_signal_length * count_signals) + current_signal_length)/time * 100
+    signal_stats.set_text(signal_stats_string.format(avg_signal_length, max_signal_length, clear_line_of_sight_percentage))
     line_of_sight.set_color("green" if is_signal_path_clear else "red") # Change color if signal path not clear
     text_asv1.set_x(0)
     text_asv2.set_x(offsets[-1])
