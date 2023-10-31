@@ -120,7 +120,7 @@ ax3.set_xlabel("X (m)")
 ax3.set_ylabel("Y (m)")
 # Show signal stats in a box
 props = dict(boxstyle='square', edgecolor="black", linewidth=0.5, facecolor='lightyellow') # these are matplotlib.patch.Patch properties
-signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear line of sight percentage = {:.2f} % "
+signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear signal percentage = {:.2f} % "
 signal_stats = plt.text(0.5, 0.02, signal_stats_string.format(0, 0, 0), transform=plt.gcf().transFigure, bbox=props, ha="center")
 
 current_signal_length = 0
