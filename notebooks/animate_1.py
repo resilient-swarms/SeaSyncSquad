@@ -188,8 +188,8 @@ def animate(i):
         else:
             # Signal window not yet open
             pass
-    clear_line_of_sight_percentage  = ((avg_signal_length * count_signals) + current_signal_length)/time 
-    signal_stats.set_text(signal_stats_string.format(avg_signal_length, max_signal_length, clear_line_of_sight_percentage))
+    clear_line_of_sight_ratio  = ((avg_signal_length * count_signals) + current_signal_length)/time 
+    signal_stats.set_text(signal_stats_string.format(avg_signal_length, max_signal_length, clear_line_of_sight_ratio))
     line_of_sight.set_color("green" if is_signal_path_clear else "red") # Change color if signal path not clear
     text_asv1.set_x(0)
     text_asv2.set_x(offsets[-1])
