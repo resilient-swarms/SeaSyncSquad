@@ -16,6 +16,7 @@ import matplotlib.animation as animation
 import matplotlib.patches as mpatches
 import numpy as np
 import utils
+import collections
 from shapely.geometry import Point, LineString
 from geometry import py_Coordinates_3D
 from sea_surface import py_Sea_surface
@@ -91,8 +92,11 @@ ax1.set_xlabel("Distance along the line joining the two ASVs (m)")
 ax1.set_ylabel("Z (m)")
 # Top view - 1
 ax2 = plt.subplot(221)
-asv1_x = [position_1.x,]
-asv1_y = [position_1.y,]
+deque_length = 1500
+asv1_x = collections.deque(maxlen = deque_length)
+asv1_y = collections.deque(maxlen = deque_length)
+asv1_x.append(position_1.x)
+asv1_y.append(position_1.y)
 asv1_path, = ax2.plot(asv1_x, asv1_y, color="grey")
 ax2.set_xlim(min(asv1_x) - 2, max(asv1_x) + 2)
 ax2.set_ylim(min(asv1_y) - 2, max(asv1_y) + 2)
@@ -101,8 +105,10 @@ ax2.set_xlabel("X (m)")
 ax2.set_ylabel("Y (m)")
 # Top view - 2
 ax3 = plt.subplot(222)
-asv2_x = [position_2.x,]
-asv2_y = [position_2.y,]
+asv2_x = collections.deque(maxlen = deque_length)
+asv2_y = collections.deque(maxlen = deque_length)
+asv2_x.append(position_2.x)
+asv2_y.append(position_2.y)
 asv2_path, = ax3.plot(asv2_x, asv2_y, color="grey")
 ax3.set_xlim(min(asv2_x) - 2, max(asv2_x) + 2)
 ax3.set_ylim(min(asv2_y) - 2, max(asv2_y) + 2)
