@@ -111,8 +111,8 @@ class Simulate_LOS_communication:
         offsets.append(line.length)
         return points, offsets
     
-    def __animate(self, *args):
-        self.time += self.time_step_size/1000
+    def __animate(self, time_index):
+        time = time_index * self.time_step_size/1000 # sec
         wave_elevations = []
         waveform = []
         # Update asv dynamics
@@ -128,7 +128,7 @@ class Simulate_LOS_communication:
         # Update the sea surface view
         for i in range(len(points)):
             p = py_Coordinates_3D(points[i].x, points[i].y)
-            elevation = self.sea_surface.py_get_elevation(p, self.time)
+            elevation = self.sea_surface.py_get_elevation(p, time)
             wave_elevations.append(elevation)
             waveform.append((offsets[i], elevation))
         self.wave_plot.set_data(offsets, wave_elevations)  
@@ -176,7 +176,7 @@ class Simulate_LOS_communication:
             else:
                 # Signal window not yet open
                 pass
-        clear_signal_window_ratio  = ((self.avg_signal_window_length * self.count_signal_windows) + self.current_signal_window_length) / self.time 
+        clear_signal_window_ratio  = ((self.avg_signal_window_length * self.count_signal_windows) + self.current_signal_window_length) / time if time != 0 else 0
         self.signal_stats_plot.set_text(self.signal_stats_string.format(self.avg_signal_window_length, self.max_signal_window_length, clear_signal_window_ratio))
         # Update the text markers in the line of sight view
         self.text_asv1.set_x(0)
@@ -189,13 +189,8 @@ class Simulate_LOS_communication:
         self.max_signal_window_length     = 0
         self.avg_signal_window_length     = 0
         self.count_signal_windows         = 0
-        # Update data for each animation step
-        self.time = 0
-
         # Start simulation and animation
-        ani = animation.FuncAnimation(
-            self.fig, self.__animate, interval=self.time_step_size, blit=False, save_count=50)
-
+        ani = animation.FuncAnimation(self.fig, self.__animate, interval=self.time_step_size, blit=False, save_count=50)
         # To save the animation, use e.g.
         #
         # ani.save("movie.mp4")
@@ -205,7 +200,6 @@ class Simulate_LOS_communication:
         # writer = animation.FFMpegWriter(
         #     fps=15, metadata=dict(artist='Me'), bitrate=1800)
         # ani.save("movie.mp4", writer=writer)
-
         plt.show()
 
 
