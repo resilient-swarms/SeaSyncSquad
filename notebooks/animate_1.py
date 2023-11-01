@@ -22,205 +22,205 @@ from geometry import py_Coordinates_3D
 from sea_surface import py_Sea_surface
 from asv import py_Asv
 
-# Simulation time step size
-time_step_size = 40 # milli-sec
+class Simulate_LOS_communication:
+    def __init__(self, sea, asv1, asv2):
+        self.sea = sea
+        self.asv1 = asv1 
+        self.asv2 = asv2 
+        # Simulation time step size
+        self.time_step_size = 40 # milli-sec
+        # Sea surface
+        wave_rand_seed = 1
+        count_component_waves = 21
+        self.sea_surface = py_Sea_surface(sea["wave_hs"], sea["wave_dp"], wave_rand_seed, count_component_waves)
+        # Initialise ASV
+        self.py_asv1 = py_Asv(utils.asv_spec, self.sea_surface, asv1["position"], asv1["attitude"])
+        self.py_asv2 = py_Asv(utils.asv_spec, self.sea_surface, asv2["position"], asv2["attitude"])
+        self.py_asv1.py_set_surge_sway_halt(asv1["is_surge_sway_halt_set"])
+        self.py_asv1.py_set_surge_sway_halt(asv1["is_surge_sway_halt_set"])
+        # Create a list of equidistant points between the two ASVs
+        p1 = Point(asv1["position"].x, asv1["position"].y)
+        p2 = Point(asv2["position"].x, asv2["position"].y)
+        points, offsets = self.__create_equidistant_points(p1, p2)
+        # Initialise animation window
+        self.fig, self.ax = plt.subplots()
+        # Initialise the line of sight view
+        self.ax1 = plt.subplot(212)
+        self.ax1.set_ylim(-2*round(sea["wave_hs"]), 2*round(sea["wave_hs"]))
+        # self.ax1.grid(True)
+        # self.ax1.set_aspect('equal', adjustable='box')
+        self.wave_plot, = self.ax1.plot(offsets, [0]*len(points), color="cornflowerblue") # Draw the sea surface between the two points
+        self.antenna1_plot, = self.ax1.plot([offsets[0],  offsets[0]],  [0,self.asv1["antenna_height"]], color="black") # Draw the antenna at p1
+        self.antenna2_plot, = self.ax1.plot([offsets[-1], offsets[-1]], [0,self.asv2["antenna_height"]], color="black") # Draw the antenna at p2
+        self.los_plot, = self.ax1.plot([offsets[0], offsets[-1]], [self.asv1["antenna_height"], self.asv2["antenna_height"]], color="green", linestyle='--')
+        self.text_asv1 = self.ax1.text(offsets[0], -sea["wave_hs"], "| ASV-1", ha='left', va='top')
+        self.text_asv2 = self.ax1.text(offsets[-1], -sea["wave_hs"], "ASV-2 |", ha='right', va='top')
+        self.ax1.set_title("Signal path between antennas on ASV-1 and ASV-2")
+        green_patch = mpatches.Patch(color='green', label='Signal clear')
+        red_patch = mpatches.Patch(color='red', label='Signal interrupted')
+        self.ax1.legend(handles=[green_patch, red_patch], loc="lower center")
+        self.ax1.set_xlabel("Distance along the line joining the two ASVs (m)")
+        self.ax1.set_ylabel("Z (m)")
+        # Initialise ASV-1 path view
+        deque_length = 1500 
+        self.ax2 = plt.subplot(221)
+        self.asv1_path = collections.deque(maxlen = deque_length)
+        self.asv1_path.append({"x":asv1["position"].x, "y":asv1["position"].y})
+        self.asv1_path_plot, = self.ax2.plot([p["x"] for p in self.asv1_path], [p["y"] for p in self.asv1_path], color="lightgrey")
+        self.ax2.set_xlim(min([p["x"] for p in self.asv1_path]) - utils.asv_spec.L_wl, max([p["x"] for p in self.asv1_path]) + utils.asv_spec.L_wl)
+        self.ax2.set_ylim(min([p["y"] for p in self.asv1_path]) - utils.asv_spec.L_wl, max([p["x"] for p in self.asv1_path]) + utils.asv_spec.L_wl)
+        self.ax2.set_title("Real-time position, heading, and trailing path of ASV-1")
+        self.ax2.set_xlabel("X (m)")
+        self.ax2.set_ylabel("Y (m)")
+        # Initialise ASV-2 path view
+        self.ax3 = plt.subplot(222)
+        self.asv2_path = collections.deque(maxlen = deque_length)
+        self.asv2_path.append({"x":asv2["position"].x, "y":asv2["position"].y})
+        self.asv2_path_plot, = self.ax3.plot([p["x"] for p in self.asv2_path], [p["y"] for p in self.asv2_path], color="lightgrey")
+        self.ax3.set_xlim(min([p["x"] for p in self.asv2_path]) - utils.asv_spec.L_wl, max([p["x"] for p in self.asv2_path]) + utils.asv_spec.L_wl)
+        self.ax3.set_ylim(min([p["y"] for p in self.asv2_path]) - utils.asv_spec.L_wl, max([p["x"] for p in self.asv2_path]) + utils.asv_spec.L_wl)
+        self.ax3.set_title("Real-time position, heading, and trailing path of ASV-2")
+        self.ax3.set_xlabel("X (m)")
+        self.ax3.set_ylabel("Y (m)")
+        # Also draw arrows on the path views to show the real-time position and heading of the ASVs 
+        self.arrow_length = utils.asv_spec.L_wl
+        asv1_heading = asv1["attitude"].z
+        asv1_delta_x = self.arrow_length * math.sin(asv1_heading)
+        asv1_delta_y = self.arrow_length * math.cos(asv1_heading)
+        self.arrow1_plot = self.ax2.arrow(asv1["position"].x, asv1["position"].y, asv1_delta_x, asv1_delta_y, shape='full', color="black", length_includes_head=True, head_width=.1)
+        asv2_heading = asv2["attitude"].z
+        asv2_delta_x = self.arrow_length * math.sin(asv2_heading)
+        asv2_delta_y = self.arrow_length * math.cos(asv2_heading)
+        self.arrow2_plot = self.ax3.arrow(asv2["position"].x, asv2["position"].y, asv2_delta_x, asv2_delta_y, shape='full', color="black", length_includes_head=True, head_width=.1)
+        # Show signal stats in a box
+        props = dict(boxstyle='square', edgecolor="black", linewidth=0.5, facecolor='lightyellow') # these are matplotlib.patch.Patch properties
+        self.signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear signal window ratio = {:.2f} "
+        self.signal_stats_plot = plt.text(0.5, 0.02, self.signal_stats_string.format(0, 0, 0), transform=plt.gcf().transFigure, bbox=props, ha="center")
 
-# Simulation time in seconds
-time_duration = 3*60 # sec
-
-# Sea surface variables
-wave_hs = 1.2 # Significant wave height in m
-wave_dp = math.pi/3 
-
-# Sea surface
-wave_rand_seed = 1
-count_component_waves = 21
-sea_surface = py_Sea_surface(wave_hs, wave_dp, wave_rand_seed, count_component_waves)
-
-# ASV positions
-position_1 = py_Coordinates_3D(103.3055419921875, 101.90850830078125)
-position_2 = py_Coordinates_3D(3018.09765625, 3010.44873046875)
-# position_1 = py_Coordinates_3D(100, 100)
-# position_2 = py_Coordinates_3D(200, 200)
-
-# Create a list of equidistant points between the positions
-def create_equidistant_points(p1, p2):
-    line = LineString([p1, p2])
-    offset = 1.0 # m
-    cumulative_offset = 0 # m
-    points = []
-    offsets = []
-    while cumulative_offset < line.length:
-        points.append(line.interpolate(cumulative_offset))
-        offsets.append(cumulative_offset)
-        cumulative_offset += offset
-    points.append(p2)
-    offsets.append(line.length)
-    return points, offsets
-
-p1 = Point(position_1.x, position_1.y)
-p2 = Point(position_2.x, position_2.y)
-points, offsets = create_equidistant_points(p1, p2)
-
-# Initialise ASV
-start_attitude = py_Coordinates_3D(0.0, 0.0, 0.0) # Both ASVs will have the same initial attitude
-asv_1 = py_Asv(utils.asv_spec, sea_surface, position_1, start_attitude)
-asv_2 = py_Asv(utils.asv_spec, sea_surface, position_2, start_attitude)
-# Uncomment the below to make the ASVs stationary
-# asv_1.py_set_surge_sway_halt(True)
-# asv_2.py_set_surge_sway_halt(True)
-
-# Antenna 
-antenna_height = 1.0 # m
-
-# Initialise animated plot
-# Side view
-fig, ax = plt.subplots()
-ax1 = plt.subplot(212)
-ax1.set_ylim(-2.0, 2.0)
-# ax1.grid(True)
-# ax1.set_aspect('equal', adjustable='box')
-# Actors
-wave_profile, = ax1.plot(offsets, [0]*len(points), color="cornflowerblue") # Draw the sea surface between the two points
-antenna_1, = ax1.plot([0, 0], [0,antenna_height], color="grey") # Draw the antenna at p1
-antenna_2, = ax1.plot([offsets[-1], offsets[-1]], [0,antenna_height], color="grey") # Draw the antenna at p2
-line_of_sight, = ax1.plot([0, offsets[-1]], [antenna_height, antenna_height], color="green", linestyle='--') # Draw the line connecting the tips of two antennas
-text_asv1 = ax1.text(0, -wave_hs, "| ASV-1", ha='left', va='top')
-text_asv2 = ax1.text(offsets[-1], -wave_hs, "ASV-2 |", ha='right', va='top')
-ax1.set_title("Signal path between antennas on ASV-1 and ASV-2")
-green_patch = mpatches.Patch(color='green', label='Signal clear')
-red_patch = mpatches.Patch(color='red', label='Signal interrupted')
-ax1.legend(handles=[green_patch, red_patch], loc="lower center")
-ax1.set_xlabel("Distance along the line joining the two ASVs (m)")
-ax1.set_ylabel("Z (m)")
-# Top view - 1
-ax2 = plt.subplot(221)
-deque_length = 1500
-asv1_x = collections.deque(maxlen = deque_length)
-asv1_y = collections.deque(maxlen = deque_length)
-asv1_x.append(position_1.x)
-asv1_y.append(position_1.y)
-asv1_path, = ax2.plot(asv1_x, asv1_y, color="lightgrey")
-ax2.set_xlim(min(asv1_x) - utils.asv_spec.L_wl, max(asv1_x) + utils.asv_spec.L_wl)
-ax2.set_ylim(min(asv1_y) - utils.asv_spec.L_wl, max(asv1_y) + utils.asv_spec.L_wl)
-ax2.set_title("Real-time position, heading, and trailing path of ASV-1")
-ax2.set_xlabel("X (m)")
-ax2.set_ylabel("Y (m)")
-# Top view - 2
-ax3 = plt.subplot(222)
-asv2_x = collections.deque(maxlen = deque_length)
-asv2_y = collections.deque(maxlen = deque_length)
-asv2_x.append(position_2.x)
-asv2_y.append(position_2.y)
-asv2_path, = ax3.plot(asv2_x, asv2_y, color="lightgrey")
-ax3.set_xlim(min(asv2_x) - utils.asv_spec.L_wl, max(asv2_x) + utils.asv_spec.L_wl)
-ax3.set_ylim(min(asv2_y) - utils.asv_spec.L_wl, max(asv2_y) + utils.asv_spec.L_wl)
-ax3.set_title("Real-time position, heading, and trailing path of ASV-2")
-ax3.set_xlabel("X (m)")
-ax3.set_ylabel("Y (m)")
-# Also draw arrows for showing the instantaneous position of the ASVs 
-arrow_length = utils.asv_spec.L_wl
-asv_delta_x = arrow_length * math.sin(start_attitude.z)
-asv_delta_y = arrow_length * math.cos(start_attitude.z)
-asv1_arrow = ax2.arrow(position_1.x, position_1.y, asv_delta_x, asv_delta_y, shape='full', color="black", length_includes_head=True, head_width=.1)
-asv2_arrow = ax3.arrow(position_2.x, position_2.y, asv_delta_x, asv_delta_y, shape='full', color="black", length_includes_head=True, head_width=.1)
-# Show signal stats in a box
-props = dict(boxstyle='square', edgecolor="black", linewidth=0.5, facecolor='lightyellow') # these are matplotlib.patch.Patch properties
-signal_stats_string = " Average signal window = {:.2f} sec     |     Maximum signal window = {:.2f} sec     |     Clear signal window ratio = {:.2f} "
-signal_stats = plt.text(0.5, 0.02, signal_stats_string.format(0, 0, 0), transform=plt.gcf().transFigure, bbox=props, ha="center")
-
-current_signal_length = 0
-max_signal_length = 0
-avg_signal_length = 0
-count_signals = 0
-
-# Update data for each animation step
-time = 0
-def animate(i):
-    global time, asv1_x, asv1_y, asv2_x, asv2_y
-    global current_signal_length, max_signal_length, avg_signal_length, count_signals
-    time += time_step_size/1000
-    elevations = []
-    wave_pattern = []
-    # Update asv dynamics
-    rudder_angle = math.pi/4
-    asv_1.py_wg_compute_dynamics(rudder_angle, time_step_size)
-    asv_2.py_wg_compute_dynamics(rudder_angle, time_step_size)
-    position_1 = asv_1.py_get_position_origin()
-    position_2 = asv_2.py_get_position_origin()
-    asv1_attitude = asv_1.py_get_attitude()
-    asv2_attitude = asv_2.py_get_attitude()    
-    p1 = Point(position_1.x, position_1.y)
-    p2 = Point(position_2.x, position_2.y)
-    points, offsets = create_equidistant_points(p1, p2)  
-    # Draw the sea surface  
-    for i in range(len(points)):
-        p = py_Coordinates_3D(points[i].x, points[i].y)
-        elevation = sea_surface.py_get_elevation(p, time)
-        elevations.append(elevation)
-        wave_pattern.append((offsets[i], elevation))
-    wave_pattern = LineString(wave_pattern) # Convert to a line string
-    wave_profile.set_data(offsets, elevations)  # update the sea surface actor
-    # Draw the paths of the ASVs
-    asv1_x.append(position_1.x)
-    asv1_y.append(position_1.y)
-    asv1_path.set_data(asv1_x, asv1_y)
-    ax2.set_xlim(min(asv1_x) - utils.asv_spec.L_wl, max(asv1_x) + utils.asv_spec.L_wl)
-    ax2.set_ylim(min(asv1_y) - utils.asv_spec.L_wl, max(asv1_y) + utils.asv_spec.L_wl)
-    asv2_x.append(position_2.x)
-    asv2_y.append(position_2.y)
-    asv2_path.set_data(asv2_x, asv2_y)
-    ax3.set_xlim(min(asv2_x) - utils.asv_spec.L_wl, max(asv2_x) + utils.asv_spec.L_wl)
-    ax3.set_ylim(min(asv2_y) - utils.asv_spec.L_wl, max(asv2_y) + utils.asv_spec.L_wl)
-    # Also draw arrows for showing the instantaneous position of the ASVs 
-    asv1_delta_x = arrow_length * math.sin(asv1_attitude.z)
-    asv1_delta_y = arrow_length * math.cos(asv1_attitude.z)
-    asv1_arrow.set_data(x=position_1.x, y=position_1.y, dx=asv1_delta_x, dy=asv1_delta_y)
-    asv2_delta_x = arrow_length * math.sin(asv2_attitude.z)
-    asv2_delta_y = arrow_length * math.cos(asv2_attitude.z)
-    asv2_arrow.set_data(x=position_2.x, y=position_2.y, dx=asv2_delta_x, dy=asv2_delta_y)
-    # Compute the antenna heights considering roll and pitch of the vehicles
-    z_antenna_1 = elevations[0]  + antenna_height*math.cos(asv1_attitude.x)*math.cos(asv1_attitude.y)
-    z_antenna_2 = elevations[-1] + antenna_height*math.cos(asv2_attitude.x)*math.cos(asv2_attitude.y)
-    # Draw the antennas
-    antenna_1.set_data([0, 0], [elevations[0], z_antenna_1]) # Update the antenna actor
-    antenna_2.set_data([offsets[-1], offsets[-1]], [elevations[-1], z_antenna_2]) # Update the antenna actor
-    # Draw the signal path
-    signal_path = LineString([(0, z_antenna_1), (offsets[-1], z_antenna_2)])
-    is_signal_path_clear = True if signal_path.intersection(wave_pattern).is_empty else False 
-    line_of_sight.set_data([0, offsets[-1]], [z_antenna_1, z_antenna_2]) # Update line of sight
-    if is_signal_path_clear:
-        current_signal_length += time_step_size/1000
-    else:
-        if current_signal_length != 0.0:
-            max_signal_length = current_signal_length if current_signal_length > max_signal_length else max_signal_length
-            total_signal_length = avg_signal_length * count_signals + current_signal_length
-            count_signals += 1
-            avg_signal_length = total_signal_length / count_signals
-            current_signal_length = 0.0
+    def __create_equidistant_points(self, p1, p2):
+        line = LineString([p1, p2])
+        offset = 1.0 # m
+        cumulative_offset = 0 # m
+        points = []
+        offsets = []
+        while cumulative_offset < line.length:
+            points.append(line.interpolate(cumulative_offset))
+            offsets.append(cumulative_offset)
+            cumulative_offset += offset
+        points.append(p2)
+        offsets.append(line.length)
+        return points, offsets
+    
+    def __animate(self, *args):
+        self.time += self.time_step_size/1000
+        wave_elevations = []
+        waveform = []
+        # Update asv dynamics
+        self.py_asv1.py_wg_compute_dynamics(self.asv1["rudder_angle"], self.time_step_size)
+        self.py_asv2.py_wg_compute_dynamics(self.asv2["rudder_angle"], self.time_step_size)
+        asv1_position = self.py_asv1.py_get_position_origin()
+        asv2_position = self.py_asv2.py_get_position_origin()
+        asv1_attitude = self.py_asv1.py_get_attitude()
+        asv2_attitude = self.py_asv2.py_get_attitude()    
+        p1 = Point(asv1_position.x, asv1_position.y)
+        p2 = Point(asv2_position.x, asv2_position.y)
+        points, offsets = self.__create_equidistant_points(p1, p2)  
+        # Update the sea surface view
+        for i in range(len(points)):
+            p = py_Coordinates_3D(points[i].x, points[i].y)
+            elevation = self.sea_surface.py_get_elevation(p, self.time)
+            wave_elevations.append(elevation)
+            waveform.append((offsets[i], elevation))
+        self.wave_plot.set_data(offsets, wave_elevations)  
+        # Update the ASV-1 path view
+        self.asv1_path.append({"x":asv1_position.x, "y":asv1_position.y})
+        self.asv1_path_plot.set_data([p["x"] for p in self.asv1_path], [p["y"] for p in self.asv1_path])
+        self.ax2.set_xlim(min([p["x"] for p in self.asv1_path]) - utils.asv_spec.L_wl, max([p["x"] for p in self.asv1_path]) + utils.asv_spec.L_wl)
+        self.ax2.set_ylim(min([p["y"] for p in self.asv1_path]) - utils.asv_spec.L_wl, max([p["y"] for p in self.asv1_path]) + utils.asv_spec.L_wl)
+        # Update the ASV-2 path view
+        self.asv2_path.append({"x":asv2_position.x, "y":asv2_position.y})
+        self.asv2_path_plot.set_data([p["x"] for p in self.asv2_path], [p["y"] for p in self.asv2_path])
+        self.ax3.set_xlim(min([p["x"] for p in self.asv2_path]) - utils.asv_spec.L_wl, max([p["x"] for p in self.asv2_path]) + utils.asv_spec.L_wl)
+        self.ax3.set_ylim(min([p["y"] for p in self.asv2_path]) - utils.asv_spec.L_wl, max([p["y"] for p in self.asv2_path]) + utils.asv_spec.L_wl)
+        # Update arrows for showing the instantaneous position of the ASVs 
+        asv1_heading = asv1_attitude.z
+        asv1_delta_x = self.arrow_length * math.sin(asv1_heading)
+        asv1_delta_y = self.arrow_length * math.cos(asv1_heading)
+        self.arrow1_plot.set_data(x=asv1_position.x, y=asv1_position.y, dx=asv1_delta_x, dy=asv1_delta_y)
+        asv2_heading = asv2_attitude.z
+        asv2_delta_x = self.arrow_length * math.sin(asv2_heading)
+        asv2_delta_y = self.arrow_length * math.cos(asv2_heading)
+        self.arrow2_plot.set_data(x=asv2_position.x, y=asv2_position.y, dx=asv2_delta_x, dy=asv2_delta_y)
+        # Compute the antenna heights considering roll and pitch of the vehicles
+        antenna1_z = wave_elevations[0]  + self.asv1["antenna_height"] * math.cos(asv1_attitude.x)*math.cos(asv1_attitude.y)
+        antenna2_z = wave_elevations[-1] + self.asv2["antenna_height"] * math.cos(asv2_attitude.x)*math.cos(asv2_attitude.y)
+        # Update the antennas in the line of sight view
+        self.antenna1_plot.set_data([offsets[0],  offsets[0]],  [wave_elevations[0],  antenna1_z]) 
+        self.antenna2_plot.set_data([offsets[-1], offsets[-1]], [wave_elevations[-1], antenna2_z]) 
+        # Update signal path in the line of sight view
+        signal_path = LineString([(offsets[0], antenna1_z), (offsets[-1], antenna2_z)])
+        waveform = LineString(waveform) # Convert to a line string
+        is_signal_path_clear = True if signal_path.intersection(waveform).is_empty else False 
+        self.los_plot.set_data([offsets[0], offsets[-1]], [antenna1_z, antenna2_z]) 
+        self.los_plot.set_color("green" if is_signal_path_clear else "red") 
+        # Update the signal stats view
+        if is_signal_path_clear:
+            self.current_signal_window_length += self.time_step_size/1000
         else:
-            # Signal window not yet open
-            pass
-    clear_line_of_sight_ratio  = ((avg_signal_length * count_signals) + current_signal_length)/time 
-    signal_stats.set_text(signal_stats_string.format(avg_signal_length, max_signal_length, clear_line_of_sight_ratio))
-    line_of_sight.set_color("green" if is_signal_path_clear else "red") # Change color if signal path not clear
-    text_asv1.set_x(0)
-    text_asv2.set_x(offsets[-1])
-    ax1.set_xlim(-100, offsets[-1]+100)
-    return wave_profile, antenna_1, antenna_2, line_of_sight, asv1_path, asv2_path
+            if self.current_signal_window_length != 0.0:
+                self.max_signal_window_length = self.current_signal_window_length if self.current_signal_window_length > self.max_signal_window_length else self.max_signal_window_length
+                total_signal_length = self.avg_signal_window_length * self.count_signal_windows + self.current_signal_window_length
+                self.count_signal_windows += 1
+                self.avg_signal_window_length = total_signal_length / self.count_signal_windows
+                self.current_signal_window_length = 0.0
+            else:
+                # Signal window not yet open
+                pass
+        clear_signal_window_ratio  = ((self.avg_signal_window_length * self.count_signal_windows) + self.current_signal_window_length) / self.time 
+        self.signal_stats_plot.set_text(self.signal_stats_string.format(self.avg_signal_window_length, self.max_signal_window_length, clear_signal_window_ratio))
+        # Update the text markers in the line of sight view
+        self.text_asv1.set_x(0)
+        self.text_asv2.set_x(offsets[-1])
+        self.ax1.set_xlim(-100, offsets[-1]+100)
+        return self.wave_plot, self.antenna1_plot, self.antenna2_plot, self.los_plot, self.asv1_path_plot, self.asv2_path_plot
+    
+    def run(self):
+        self.current_signal_window_length = 0
+        self.max_signal_window_length     = 0
+        self.avg_signal_window_length     = 0
+        self.count_signal_windows         = 0
+        # Update data for each animation step
+        self.time = 0
 
-# Start simulation and animation
-ani = animation.FuncAnimation(
-    fig, animate, interval=time_step_size, blit=False, save_count=50)
+        # Start simulation and animation
+        ani = animation.FuncAnimation(
+            self.fig, self.__animate, interval=self.time_step_size, blit=False, save_count=50)
 
-# To save the animation, use e.g.
-#
-# ani.save("movie.mp4")
-#
-# or
-#
-# writer = animation.FFMpegWriter(
-#     fps=15, metadata=dict(artist='Me'), bitrate=1800)
-# ani.save("movie.mp4", writer=writer)
+        # To save the animation, use e.g.
+        #
+        # ani.save("movie.mp4")
+        #
+        # or
+        #
+        # writer = animation.FFMpegWriter(
+        #     fps=15, metadata=dict(artist='Me'), bitrate=1800)
+        # ani.save("movie.mp4", writer=writer)
 
-plt.show()
+        plt.show()
+
+
+if __name__ == '__main__': 
+    sea = {"wave_hs":1.2, # m
+        "wave_dp":math.pi/3} # rad
+    asv1 = {"position": py_Coordinates_3D(103.3055419921875, 101.90850830078125), # (m, m)
+            "attitude": py_Coordinates_3D(0.0, 0.0, 0.0), # (rad, rad, rad)
+            "is_surge_sway_halt_set": False, 
+            "antenna_height": 1.0, # m
+            "rudder_angle": math.pi/4} # rad
+    asv2 = {"position": py_Coordinates_3D(3018.09765625, 3010.44873046875), # (m, m)
+            "attitude":py_Coordinates_3D(0.0, 0.0, 0.0), # (rad, rad, rad)
+            "is_surge_sway_halt_set": False,
+            "antenna_height": 1.0, # m
+            "rudder_angle": math.pi/4} # rad
+    simulation = Simulate_LOS_communication(sea, asv1, asv2)
+    simulation.run()
