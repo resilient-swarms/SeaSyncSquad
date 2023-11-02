@@ -37,7 +37,7 @@ class Simulate_LOS_communication:
         self.py_asv1 = py_Asv(utils.asv_spec, self.sea_surface, asv1["position"], asv1["attitude"])
         self.py_asv2 = py_Asv(utils.asv_spec, self.sea_surface, asv2["position"], asv2["attitude"])
         self.py_asv1.py_set_surge_sway_halt(asv1["is_surge_sway_halt_set"])
-        self.py_asv1.py_set_surge_sway_halt(asv1["is_surge_sway_halt_set"])
+        self.py_asv2.py_set_surge_sway_halt(asv2["is_surge_sway_halt_set"])
         # Create a list of equidistant points between the two ASVs
         p1 = Point(asv1["position"].x, asv1["position"].y)
         p2 = Point(asv2["position"].x, asv2["position"].y)
