@@ -30,9 +30,7 @@ class Simulate_LOS_communication:
         # Simulation time step size
         self.time_step_size = 40 # milli-sec
         # Sea surface
-        wave_rand_seed = 1
-        count_component_waves = 21
-        self.sea_surface = py_Sea_surface(sea["wave_hs"], sea["wave_dp"], wave_rand_seed, count_component_waves)
+        self.sea_surface = py_Sea_surface(sea["wave_hs"], sea["wave_dp"], sea["wave_rand_seed"], sea["count_component_waves"])
         # Initialise ASV
         self.py_asv1 = py_Asv(utils.asv_spec, self.sea_surface, asv1["position"], asv1["attitude"])
         self.py_asv2 = py_Asv(utils.asv_spec, self.sea_surface, asv2["position"], asv2["attitude"])
@@ -226,15 +224,17 @@ class Simulate_LOS_communication:
 
 
 if __name__ == '__main__': 
-    sea = {"wave_hs":1.2, # m
-        "wave_dp":math.pi/3} # rad
+    sea = { "wave_hs": 1.2, # m
+            "wave_dp": math.pi/3, # rad
+            "count_component_waves": 21,
+            "wave_rand_seed": 1}
     asv1 = {"position": py_Coordinates_3D(103.3055419921875, 101.90850830078125), # (m, m)
             "attitude": py_Coordinates_3D(0.0, 0.0, 0.0), # (rad, rad, rad)
             "is_surge_sway_halt_set": False, 
             "antenna_height": 1.0, # m
             "rudder_angle": math.pi/4} # rad
     asv2 = {"position": py_Coordinates_3D(3018.09765625, 3010.44873046875), # (m, m)
-            "attitude":py_Coordinates_3D(0.0, 0.0, 0.0), # (rad, rad, rad)
+            "attitude": py_Coordinates_3D(0.0, 0.0, 0.0), # (rad, rad, rad)
             "is_surge_sway_halt_set": False,
             "antenna_height": 1.0, # m
             "rudder_angle": math.pi/4} # rad
