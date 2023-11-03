@@ -69,7 +69,7 @@ class Simulate_LOS_communication:
         self.ax2.set_title("Real-time position, heading, and trailing path of ASV-1")
         self.ax2.set_xlabel("X (m)")
         self.ax2.set_ylabel("Y (m)")
-        self.ax2.set_aspect('equal', adjustable='box', share=True)
+        # self.ax2.set_aspect('equal', adjustable='box', share=True)
         # Initialise ASV-2 path view
         self.ax3 = plt.subplot(232)
         self.asv2_path = collections.deque(maxlen = deque_length)
@@ -80,7 +80,7 @@ class Simulate_LOS_communication:
         self.ax3.set_title("Real-time position, heading, and trailing path of ASV-2")
         self.ax3.set_xlabel("X (m)")
         self.ax3.set_ylabel("Y (m)")
-        self.ax3.set_aspect('equal', adjustable='box')
+        # self.ax3.set_aspect('equal', adjustable='box')
         # Also draw arrows on the path views to show the real-time position and heading of the ASVs 
         self.arrow_length = utils.asv_spec.L_wl
         asv1_heading = asv1["attitude"].z
