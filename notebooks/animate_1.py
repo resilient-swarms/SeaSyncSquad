@@ -10,11 +10,9 @@ asvlite_wrapper_dir = root_dir.joinpath("dependency", "ASVLite", "wrapper", "cyt
 sys.path.insert(0, str(asvlite_wrapper_dir))
 
 import math
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as mpatches
-import numpy as np
 import utils
 import collections
 from shapely.geometry import Point, LineString
@@ -42,6 +40,7 @@ class Simulate_LOS_communication:
         points, offsets = self.__create_equidistant_points(p1, p2)
         # Initialise animation window
         self.fig, self.ax = plt.subplots()
+        self.ax.axis('off')
         # Initialise the line of sight view
         self.ax1 = plt.subplot(212)
         self.ax1.set_ylim(-2*round(sea["wave_hs"]), 2*round(sea["wave_hs"]))
