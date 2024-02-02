@@ -1,3 +1,6 @@
 [submodule "dependency/ASVLite"]
 	path = dependency/ASVLite
 	url = git@github.com:resilient-swarms/ASVLite.git
+[submodule "dependency/matplotplusplus"]
+	path = dependency/matplotplusplus
+	url = https://github.com/alandefreitas/matplotplusplus.git
