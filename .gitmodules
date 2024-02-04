@@ -4,3 +4,5 @@
 [submodule "dependency/matplotlib-cpp"]
 	path = dependency/matplotlib-cpp
 	url = https://github.com/lava/matplotlib-cpp.git
+[submodule "dependency/geos"]
+	path = dependency/geos
