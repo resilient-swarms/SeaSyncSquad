@@ -57,27 +57,17 @@ void Simulate_LOS::create_equidistant_points(const union Coordinates_3D& p1,
     offsets.push_back(total_d);
 }
 
-void Simulate_LOS::create_ellipse(double radio_wave_length, std::vector<union Coordinates_3D>& points, std::vector<std::array<double, 2>>& ellipse_z)
+void Simulate_LOS::create_fresnel_zone(double radio_wave_frequency, std::vector<union Coordinates_3D>& points, std::vector<std::array<double, 2>>& fresnel_limits)
 {
-    // Equation of ellipse
-    // Ax^2 + Bxy + Cy^2 + Dx + Ey + F = 0
-    // provided B^2 - 4AC < 0
+    // Equation of the first Fresnel zone
+    // r = sqrt(d1*d2/D * c/f)
     // where:
-    // A = a^2 sin^2(theta) + b^2 cos^2(theta)
-    // B = 2(a^2 - b^2) sin(theta) cos(theta)
-    // C = a^2 cos^2(theta) + b^2 sin^2(theta)
-    // D = -2A x_c - B y_c
-    // E = -B x_c - 2C y_c
-    // F = A(x_c)^2 + B x_c y_c + C(y_c)^2 - (a^2)(b^2)
-    // a = semi-major axis
-    // b = semi-minor axis
-    // theta = angle between semi-major axis and x-axis
-    // (x_c, y_c) = coordinates of center of the ellipse
-
-    // Max Fresnel zone radius r = sqrt(lambda*d/4)
-    // where:
-    // lambda = wave length
-    // d = distance between the antennas
+    // c = speed of light = 2.997*10^8 (m/s)
+    // d1 and d2 the distance to each antenna (m).
+    // D = total distance (m) = d1 + d2
+    // f = radaio wave frequency (Hz)
+    double c = 2.997 * 100000000;
+    double f = radio_wave_frequency;
     double x_0 = points[0].keys.x;
     double y_0 = points[0].keys.y;
     double z_0 = points[0].keys.z + this->antenna_height;
@@ -85,44 +75,87 @@ void Simulate_LOS::create_ellipse(double radio_wave_length, std::vector<union Co
     double x_n = points[n].keys.x;
     double y_n = points[n].keys.y;
     double z_n = points[n].keys.z + + this->antenna_height;
-    double x_c = (x_n + x_0)/2.0;
-    double y_c = (z_n + z_0)/2.0; // The equation of the ellipse were written for XY plane, but the Fresnel ellipse is in the XZ plane
-    double d = sqrt((x_n - x_0)*(x_n - x_0) + (y_n - y_0)*(y_n - y_0) + (z_n - z_0)*(z_n - z_0));
-    double lambda = radio_wave_length;
-    double r = sqrt(lambda*d/4.0);
-    double theta;
-    if(x_0 == x_n)
-    {
-        theta = PI/2;
-    }
-    else 
-    {
-        theta = atan2(z_n - z_0, x_n - x_0);
-    }
-
-    // The ellipse
-    double b = r; // semi-minor axis
-    double a = sqrt(d*d/4 + r*r); // semi-major axis
-    double A = a*a*sin(theta)*sin(theta) + b*b*cos(theta)*cos(theta);
-    double B = 2*(a*a - b*b)*sin(theta)*cos(theta);
-    double C = a*a*cos(theta)*cos(theta) + b*b*sin(theta)*sin(theta);
-    double D = -2*A*x_c - B*y_c;
-    double E = -B*x_c - 2*C*y_c;
-    double F = A*x_c*x_c + B*x_c*y_c + C*y_c*y_c - a*a*b*b;
-
-    // For the x coordinates in the points compute the correspoinding y coordinates on the ellipse.
-    // From the above equation of ellipse, given x,
-    // y = (-(Bx + E) +- sqrt((Bx+E)^2 - 4C(Ax^2 + Dx + F)))/ (2(Ax^2 + Dx + F))
-    // provided (Bx+E)^2 - 4C(Ax^2 + Dx + F)) > 0
+    double D = sqrt((x_n - x_0)*(x_n - x_0) + (y_n - y_0)*(y_n - y_0) + (z_n - z_0)*(z_n - z_0));
     for(auto& point : points)
     {
         double x = point.keys.x;
-        double y1 = (-(B*x + E) + sqrt((B*x + E)*(B*x + E) - 4*C*(A*x*x + D*x + F)))/(2*C);
-        double y2 = (-(B*x + E) - sqrt((B*x + E)*(B*x + E) - 4*C*(A*x*x + D*x + F)))/(2*C);
-        std::array<double, 2> y{std::min(y1, y2), std::max(y1, y2)};
-        ellipse_z.push_back(y);
+        double y = point.keys.y;
+        double z = point.keys.z;
+        double d_1 = sqrt((x - x_0)*(x - x_0) + (y - y_0)*(y - y_0) + (z - z_0)*(z - z_0));
+        double d_2 = sqrt((x_n - x)*(x_n - x) + (y_n - y)*(y_n - y) + (z_n - z)*(z_n - z));
+        double r = sqrt(d_1 * d_2 * c / (D * f));
+        double z_los = z_0 + (d_1/D)*(z_n - z_0);
+        std::array<double, 2> fresnel_limits_at_point{z_los - r, z_los + r};
+        fresnel_limits.push_back(fresnel_limits_at_point);
     }
 }
+
+// void Simulate_LOS::create_ellipse(double radio_wave_length, std::vector<union Coordinates_3D>& points, std::vector<std::array<double, 2>>& ellipse_z)
+// {
+//     // Equation of ellipse
+//     // Ax^2 + Bxy + Cy^2 + Dx + Ey + F = 0
+//     // provided B^2 - 4AC < 0
+//     // where:
+//     // A = a^2 sin^2(theta) + b^2 cos^2(theta)
+//     // B = 2(a^2 - b^2) sin(theta) cos(theta)
+//     // C = a^2 cos^2(theta) + b^2 sin^2(theta)
+//     // D = -2A x_c - B y_c
+//     // E = -B x_c - 2C y_c
+//     // F = A(x_c)^2 + B x_c y_c + C(y_c)^2 - (a^2)(b^2)
+//     // a = semi-major axis
+//     // b = semi-minor axis
+//     // theta = angle between semi-major axis and x-axis
+//     // (x_c, y_c) = coordinates of center of the ellipse
+
+//     // Max Fresnel zone radius r = sqrt(lambda*d/4)
+//     // where:
+//     // lambda = wave length
+//     // d = distance between the antennas
+//     double x_0 = points[0].keys.x;
+//     double y_0 = points[0].keys.y;
+//     double z_0 = points[0].keys.z + this->antenna_height;
+//     int n = points.size() - 1;
+//     double x_n = points[n].keys.x;
+//     double y_n = points[n].keys.y;
+//     double z_n = points[n].keys.z + + this->antenna_height;
+//     double x_c = (x_n + x_0)/2.0;
+//     double y_c = (z_n + z_0)/2.0; // The equation of the ellipse were written for XY plane, but the Fresnel ellipse is in the XZ plane
+//     double d = sqrt((x_n - x_0)*(x_n - x_0) + (y_n - y_0)*(y_n - y_0) + (z_n - z_0)*(z_n - z_0));
+//     double lambda = radio_wave_length;
+//     double r = sqrt(lambda*d/4.0);
+//     double theta;
+//     if(x_0 == x_n)
+//     {
+//         theta = PI/2;
+//     }
+//     else 
+//     {
+//         theta = atan2(z_n - z_0, x_n - x_0);
+//     }
+
+//     // The ellipse
+//     double b = r; // semi-minor axis
+//     double a = sqrt(d*d/4 + r*r); // semi-major axis
+//     double A = a*a*sin(theta)*sin(theta) + b*b*cos(theta)*cos(theta);
+//     double B = 2*(a*a - b*b)*sin(theta)*cos(theta);
+//     double C = a*a*cos(theta)*cos(theta) + b*b*sin(theta)*sin(theta);
+//     double D = -2*A*x_c - B*y_c;
+//     double E = -B*x_c - 2*C*y_c;
+//     double F = A*x_c*x_c + B*x_c*y_c + C*y_c*y_c - a*a*b*b;
+
+//     // For the x coordinates in the points compute the correspoinding y coordinates on the ellipse.
+//     // From the above equation of ellipse, given x,
+//     // y = (-(Bx + E) +- sqrt((Bx+E)^2 - 4C(Ax^2 + Dx + F)))/ (2(Ax^2 + Dx + F))
+//     // provided (Bx+E)^2 - 4C(Ax^2 + Dx + F)) > 0
+//     for(auto& point : points)
+//     {
+//         double x = point.keys.x;
+//         double y1 = (-(B*x + E) + sqrt((B*x + E)*(B*x + E) - 4*C*(A*x*x + D*x + F)))/(2*C);
+//         double y2 = (-(B*x + E) - sqrt((B*x + E)*(B*x + E) - 4*C*(A*x*x + D*x + F)))/(2*C);
+//         std::array<double, 2> y{std::min(y1, y2), std::max(y1, y2)};
+//         ellipse_z.push_back(y);
+//     }
+// }
 
 
 void Simulate_LOS::run()
@@ -155,7 +188,8 @@ void Simulate_LOS::run()
 
         // Create the Fresnel zone
         std::vector<std::array<double, 2>> ellipse_z;
-        create_ellipse(0.12, sea_points, ellipse_z);
+        double radio_frequency = 2.4 * 1000000000; // Hz
+        create_fresnel_zone(radio_frequency, sea_points, ellipse_z);
         
         // Plot
         // Clear previous plot

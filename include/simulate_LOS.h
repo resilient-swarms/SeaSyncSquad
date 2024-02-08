@@ -25,9 +25,13 @@ private:
                                    std::vector<union Coordinates_3D>& points, 
                                    std::vector<double>& offsets);
     
-    void create_ellipse(double lambda, 
-                        std::vector<union Coordinates_3D>& points, 
-                        std::vector<std::array<double, 2>>& ellipse_z);
+    void create_fresnel_zone(double radio_wave_frequency, 
+                            std::vector<union Coordinates_3D>& points, 
+                            std::vector<std::array<double, 2>>& fresnel_ellipse_z);
+    
+    // void create_ellipse(double lambda, 
+    //                     std::vector<union Coordinates_3D>& points, 
+    //                     std::vector<std::array<double, 2>>& ellipse_z);
 
 private:
     struct Sea_surface* sea;

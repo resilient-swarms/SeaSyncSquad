@@ -38,12 +38,14 @@ int main()
     union Coordinates_3D position1 {100.0, 100.0, 0.0}; // {m, m, m}
     union Coordinates_3D attitude1 {0.0, 0.0, 0.0}; // {rad, rad, rad}
     struct Asv* asv1 = asv_new(asv_spec, sea, position1, attitude1);
+    asv_set_surge_sway_halt(asv1, true);
 
     // Initialise the ASV-2
     // union Coordinates_3D position2 {3018.09765625, 3010.44873046875, 0.0}; // {m, m, m}
     union Coordinates_3D position2 {200.0, 100.0, 0.0}; // {m, m, m}
     union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
     struct Asv* asv2 = asv_new(asv_spec, sea, position2, attitude2);
+    asv_set_surge_sway_halt(asv2, true);
 
     // Initialise and run the simulation
     Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
