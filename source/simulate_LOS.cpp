@@ -160,13 +160,15 @@ void Simulate_LOS::create_fresnel_zone(double radio_wave_frequency, std::vector<
 
 void Simulate_LOS::run()
 {
-    plt::draw();
+    std::vector<double> times; // vector to store all time steps. Used for plotting. 
+    std::vector<double> fresnel_clearenceses; // Fresnel zone clearence for all time steps
+    std::vector<double> fresnel_clearence_min_limit; // Min required clearence of Fresnel zone = 60%
 
-    for(int i = 0; ;++i)
+    for(int t = 0; ;++t)
     {
         std::vector<double> wave_elevations;
         std::vector<double> waveform;
-        double time = i * this->time_step_size/1000.0;
+        double time = t * this->time_step_size/1000.0;
 
         // We will use a fixed rudder angle for both ASVs
         double rudder_angle = PI/4; // rad
@@ -193,7 +195,7 @@ void Simulate_LOS::run()
         
         // Plot
         // Clear previous plot
-		plt::clf();
+		plt::clf(); 
         // Plot sea surface
         std::vector<double> x_sea, y_sea;
         for(int i = 0; i < sea_points.size(); ++i)
@@ -201,8 +203,10 @@ void Simulate_LOS::run()
             x_sea.push_back(offsets[i]);
             y_sea.push_back(sea_points[i].keys.z);
         }
+        plt::subplot(2, 1, 1);
         plt::plot(x_sea, y_sea, "b");
         // Plot Fresnel zone
+        double min_clearence_current_timestep = 100.0;
         for(int i = 0; i < sea_points.size(); ++i)
         {
             double y1 = ellipse_z[i][0];
@@ -226,6 +230,7 @@ void Simulate_LOS::run()
                 y_ellipse_section_blocked.push_back(y1);
                 y_ellipse_section_blocked.push_back(y2);
                 plt::plot(x_ellipse_section, y_ellipse_section_blocked, "r");
+                min_clearence_current_timestep = 0.0;
             }
             else
             {
@@ -235,10 +240,24 @@ void Simulate_LOS::run()
                 y_ellipse_section_clear.push_back(y2);
                 plt::plot(x_ellipse_section, y_ellipse_section_clear, "g");
                 plt::plot(x_ellipse_section, y_ellipse_section_blocked, "r");
+                double clearence = (y2-y0)/(y2-y1)*100;
+                if(min_clearence_current_timestep > clearence)
+                {
+                    min_clearence_current_timestep = clearence;
+                }
             }
         }
-
         plt::axis("equal");
+
+        times.push_back(time);
+        fresnel_clearenceses.push_back(min_clearence_current_timestep);
+        fresnel_clearence_min_limit.push_back(60.0);
+
+        // Plot the Fresnel zone obstruction
+        plt::subplot(2, 1, 2);
+        plt::plot(times, fresnel_clearenceses, "grey");
+        plt::plot(times, fresnel_clearence_min_limit, "orange");
+
         plt::pause(0.04);
     }
 }
