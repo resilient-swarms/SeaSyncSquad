@@ -204,9 +204,10 @@ void Simulate_LOS::run()
             y_sea.push_back(sea_points[i].keys.z);
         }
         plt::subplot(2, 1, 1);
-        plt::plot(x_sea, y_sea, "b");
+        plt::named_plot("Ocean surface", x_sea, y_sea, "cornflowerblue");
         // Plot Fresnel zone
         double min_clearence_current_timestep = 100.0;
+        bool legend_inserted_once = false;
         for(int i = 0; i < sea_points.size(); ++i)
         {
             double y1 = ellipse_z[i][0];
@@ -238,8 +239,17 @@ void Simulate_LOS::run()
                 y_ellipse_section_blocked.push_back(y0);
                 y_ellipse_section_clear.push_back(y0);
                 y_ellipse_section_clear.push_back(y2);
-                plt::plot(x_ellipse_section, y_ellipse_section_clear, "g");
-                plt::plot(x_ellipse_section, y_ellipse_section_blocked, "r");
+                if(! legend_inserted_once)
+                {
+                    plt::named_plot("Clear Fresnel zone", x_ellipse_section, y_ellipse_section_clear, "g");
+                    plt::named_plot("Wave obstructed Fresnel zone", x_ellipse_section, y_ellipse_section_blocked, "r");
+                    legend_inserted_once = true;
+                }
+                else
+                {
+                    plt::plot(x_ellipse_section, y_ellipse_section_clear, "g");
+                    plt::plot(x_ellipse_section, y_ellipse_section_blocked, "r");
+                }
                 double clearence = (y2-y0)/(y2-y1)*100;
                 if(min_clearence_current_timestep > clearence)
                 {
@@ -247,6 +257,31 @@ void Simulate_LOS::run()
                 }
             }
         }
+        // Plot antenna positions
+        int n = offsets.size() - 1;
+        std::vector<double> antenna_1_x {offsets[0], offsets[0]};
+        std::vector<double> antenna_1_y {sea_points[0].keys.z, sea_points[0].keys.z+antenna_height};
+        plt::named_plot("Antenna", antenna_1_x, antenna_1_y, "black");
+        std::vector<double> antenna_2_x {offsets[n], offsets[n]};
+        std::vector<double> antenna_2_y {sea_points[n].keys.z, sea_points[n].keys.z+antenna_height};
+        plt::plot(antenna_2_x, antenna_2_y, "black");
+        plt::text(offsets[0], -5.0, "Tx");
+        plt::text(offsets[n], -5.0, "Rx");
+        // Extra info
+        int wave_count = sea_surface_get_count_component_waves(this->sea);
+        const struct Regular_wave* peak_wave = sea_surface_get_regular_wave_at(this->sea, (wave_count-1)/2);
+        double peak_wave_length = regular_wave_get_length(peak_wave);
+        plt::text(0.0, -10.0, "Ocean wave length = "+std::to_string(peak_wave_length)+" m");
+        double sig_wave_height = sea_surface_get_significant_height(this->sea);
+        plt::text(30.0, -10.0, "Significant wave height = "+std::to_string(sig_wave_height)+" m");
+        plt::text(60.0, -10.0, "Antenna height = "+std::to_string(antenna_height)+" m");
+        plt::text(90.0, -10.0, "Radio freq = "+std::to_string(radio_frequency/1000000000)+" GHz");
+        double max_fresnel_radius = ellipse_z[int(ellipse_z.size()/2)][1] - ellipse_z[int(ellipse_z.size()/2)][0];
+        plt::text(0.0, 10.0, "Max Fresnel zone radius = "+std::to_string(max_fresnel_radius)+" m");
+        plt::title("Ocean Waves Blocking Fresnel Zone");
+        plt::xlabel("x (m)");
+        plt::ylabel("z (m)");
+        plt::legend();
         plt::axis("equal");
 
         times.push_back(time);
@@ -256,7 +291,10 @@ void Simulate_LOS::run()
         // Plot the Fresnel zone obstruction
         plt::subplot(2, 1, 2);
         plt::plot(times, fresnel_clearenceses, "grey");
-        plt::plot(times, fresnel_clearence_min_limit, "orange");
+        plt::plot(times, fresnel_clearence_min_limit, "r--");
+        plt::title("Fresnel Zone Cleareance");
+        plt::xlabel("time (sec)");
+        plt::ylabel("Fresnel zone clearance (%)");
 
         plt::pause(0.04);
     }

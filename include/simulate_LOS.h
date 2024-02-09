@@ -8,6 +8,7 @@ extern "C"
 {
     #include "constants.h"
     #include "geometry.h"
+    #include "regular_wave.h"
     #include "sea_surface.h"
     #include "asv.h"
 }
