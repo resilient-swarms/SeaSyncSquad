@@ -279,8 +279,8 @@ void Simulate_LOS::run()
         double max_fresnel_radius = ellipse_z[int(ellipse_z.size()/2)][1] - ellipse_z[int(ellipse_z.size()/2)][0];
         plt::text(0.0, 10.0, "Max Fresnel zone radius = "+std::to_string(max_fresnel_radius)+" m");
         plt::title("Ocean Waves Blocking Fresnel Zone");
-        plt::xlabel("x (m)");
-        plt::ylabel("z (m)");
+        plt::xlabel("Distance along the line joining the antennas Tx and Rx (m)\n");
+        plt::ylabel("Z (m)");
         plt::legend();
         plt::axis("equal");
 
@@ -290,12 +290,14 @@ void Simulate_LOS::run()
 
         // Plot the Fresnel zone obstruction
         plt::subplot(2, 1, 2);
-        plt::plot(times, fresnel_clearenceses, "grey");
-        plt::plot(times, fresnel_clearence_min_limit, "r--");
+        plt::named_plot("Fresnel zone clearance", times, fresnel_clearenceses, "grey");
+        plt::named_plot("Minimum required Fresnel zone clearance", times, fresnel_clearence_min_limit, "r--");
         plt::title("Fresnel Zone Cleareance");
-        plt::xlabel("time (sec)");
+        plt::xlabel("Time (sec)");
         plt::ylabel("Fresnel zone clearance (%)");
+        plt::legend();
 
+        plt::tight_layout();
         plt::pause(0.04);
     }
 }
