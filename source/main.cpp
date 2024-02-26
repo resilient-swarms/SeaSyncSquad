@@ -1,4 +1,6 @@
 #include <iostream>
+#include <string>
+#include <fmt/core.h>
 #include "simulate_LOS.h"
 
 extern "C" 
@@ -41,12 +43,15 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 {
     std::ofstream fout;
-    fout.open("../results/log.csv");
-    fout << "ant_ht,hs,wave_dp,seed,time,clearence\n";
 
     // Initialise the sea surface
     for(double antenna_height = 1.0; antenna_height < 5.0; antenna_height+=0.5)
     {
+        std::string file_name = "../results/log_";
+        file_name += fmt::format("{:.1f}", antenna_height) + "_.csv";
+        fout.open(file_name);
+        fout << "ant_ht,hs,wave_dp,seed,time,clearence\n";
+
         for(double wave_hs = 0.5; wave_hs < 16.0; wave_hs+=1.0)
         {
             for(double wave_dp = 0.0; wave_dp < 2*PI; wave_dp+=PI/6.0)
@@ -81,9 +86,9 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
                 }
             }
         }
-    }
 
-    fout.close();
+        fout.close();
+    }
 }
 
 

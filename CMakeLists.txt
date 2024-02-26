@@ -61,9 +61,11 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(Python3 COMPONENTS NumPy REQUIRED)
+find_package(fmt REQUIRED)
 TARGET_LINK_LIBRARIES(seasyncsquad
         m
         Threads::Threads
         Python3::Python
         Python3::Module
-        Python3::NumPy)
+        Python3::NumPy
+        fmt::fmt)
