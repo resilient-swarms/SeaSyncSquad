@@ -305,10 +305,15 @@ void Simulate_LOS::run()
 void Simulate_LOS::run_headless(std::ofstream& fout)
 {
     double sig_wave_height = sea_surface_get_significant_height(this->sea);
+    double wave_dp = sea_surface_get_predominant_heading(this->sea);
     int seed = sea_surface_get_rand_seed(this->sea);  
-    std::cout<< sig_wave_height << " " << seed << " " << this->antenna_height << "\n";   
+    std::cout<< this->antenna_height << ", " 
+             << sig_wave_height << ", " 
+             << wave_dp << ", " 
+             << seed << "\n";   
 
-    for(double time = 0; time < 10*60; time+=this->time_step_size/1000.0)
+    double simulation_length = 15.0 * 60.0; // sec
+    for(double time = 0; time < simulation_length; time+=this->time_step_size/1000.0)
     {
         // We will use a fixed rudder angle for both ASVs
         double rudder_angle = PI/4; // rad
@@ -358,6 +363,11 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
             }
         }
         // Write to file
-        fout << sig_wave_height << "," << seed << "," << this->antenna_height << "," << time << "," << min_clearence_current_timestep << "\n";
+        fout << this->antenna_height << "," 
+             << sig_wave_height << "," 
+             << wave_dp << "," 
+             << seed << "," 
+             << time << "," 
+             << min_clearence_current_timestep << "\n";
     }
 }
