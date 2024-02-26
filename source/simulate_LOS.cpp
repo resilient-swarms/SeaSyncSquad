@@ -4,6 +4,7 @@
 #include "simulate_LOS.h"
 
 #include <iostream>
+#include <fstream>
 
 namespace plt = matplotlibcpp;
 
@@ -300,4 +301,69 @@ void Simulate_LOS::run()
         plt::tight_layout();
         plt::pause(0.04);
     }
+}
+
+void Simulate_LOS::run_headless()
+{
+    std::ofstream fout;
+    fout.open("log.csv", std::ios::out | std::ios::app);
+    fout << "hs, seed, ant_ht, time, clearence \n";
+
+    double sig_wave_height = sea_surface_get_significant_height(this->sea);
+    int seed = sea_surface_get_rand_seed(this->sea);  
+    std::cout<< sig_wave_height << " " << seed << " " << this->antenna_height << "\n";   
+
+    for(double time = 0; time < 10*60; time+=this->time_step_size/1000.0)
+    {
+        // We will use a fixed rudder angle for both ASVs
+        double rudder_angle = PI/4; // rad
+
+        // Update ASV dynamics
+        wave_glider_compute_dynamics(this->asv1, rudder_angle, this->time_step_size);
+        wave_glider_compute_dynamics(this->asv2, rudder_angle, this->time_step_size);
+
+        // Get position and attitude of the ASVs
+        union Coordinates_3D asv1_position = asv_get_position_origin(this->asv1);
+        union Coordinates_3D asv2_position = asv_get_position_origin(this->asv2);
+        union Coordinates_3D asv1_attitude = asv_get_attitude(this->asv1);
+        union Coordinates_3D asv2_attitude = asv_get_attitude(this->asv2);
+
+        // Create eqidistant points 
+        std::vector<union Coordinates_3D> sea_points;
+        std::vector<double> offsets;
+        create_equidistant_points(asv1_position, asv2_position, time,  sea_points, offsets);
+
+        // Create the Fresnel zone
+        std::vector<std::array<double, 2>> ellipse_z;
+        double radio_frequency = 2.4 * 1000000000; // Hz
+        create_fresnel_zone(radio_frequency, sea_points, ellipse_z);
+
+        // Calculate clearence
+        double min_clearence_current_timestep = 100.0;
+        for(int i = 0; i < sea_points.size(); ++i)
+        {
+            double y1 = ellipse_z[i][0];
+            double y2 = ellipse_z[i][1]; 
+            double y0 = sea_points[i].keys.z;
+            if(y0 < y1)
+            {
+                // No wave blocking
+            }
+            else if(y0 > y2)
+            {
+                min_clearence_current_timestep = 0.0;
+            }
+            else
+            {
+                double clearence = (y2-y0)/(y2-y1)*100;
+                if(min_clearence_current_timestep > clearence)
+                {
+                    min_clearence_current_timestep = clearence;
+                }
+            }
+        }
+        // Write to file
+        fout << sig_wave_height << ", " << seed << ", " << this->antenna_height << ", " << time << ", " << min_clearence_current_timestep << " \n";
+    }
+    fout.close();
 }

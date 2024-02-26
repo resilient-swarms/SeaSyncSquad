@@ -9,7 +9,7 @@ extern "C"
     #include "asv.h"
 }
 
-int main()
+int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 {
     // Initialise the sea surface
     double wave_hs = 2.5; // m
@@ -18,20 +18,6 @@ int main()
     int wave_rand_seed = 1;
     struct Sea_surface* sea = sea_surface_new(wave_hs, wave_dp, wave_rand_seed, count_component_waves);
 
-    // ASV spec
-    struct Asv_specification asv_spec {
-        2.1 , // L_wl (m)
-        0.6,  // B_wl (m)
-        0.25, // D (m)
-        0.09, // T (m)
-        4.0,  // max_speed (m/s)
-        0.09, // disp (m3)
-        0.2,  // r_roll (m)
-        0.6,  // r_pitch (m)
-        0.6,  // r_yaw (m)
-        {1.05, 0.0, -0.2} // cog {m, m, m} 
-    };
-    bool is_surge_sway_halt_set = false;
     double antenna_height = 1.0; // m
     
     // Initialise the ASV-1
@@ -52,7 +38,68 @@ int main()
     simulation.run();
 }
 
+int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
+{
+    // Initialise the sea surface
+    for(double wave_hs = 0.5; wave_hs < 16.0; wave_hs+=1.0)
+    {
+        for(int wave_rand_seed = 1; wave_rand_seed < 6; wave_rand_seed++)
+        {
+            // Init sea surface
+            double wave_dp = PI/3; // rad
+            int count_component_waves = 21; 
+            struct Sea_surface* sea = sea_surface_new(wave_hs, wave_dp, wave_rand_seed, count_component_waves);
 
+            for(double antenna_height = 1.0; antenna_height < 5.0; antenna_height+=0.5)
+            {               
+                // Init ASV-1
+                union Coordinates_3D position1 {100.0, 100.0, 0.0}; // {m, m, m}
+                union Coordinates_3D attitude1 {0.0, 0.0, 0.0}; // {rad, rad, rad}
+                struct Asv* asv1 = asv_new(asv_spec, sea, position1, attitude1);
+                asv_set_surge_sway_halt(asv1, true);
+
+                // Init ASV-2
+                // union Coordinates_3D position2 {3018.09765625, 3010.44873046875, 0.0}; // {m, m, m}
+                union Coordinates_3D position2 {200.0, 100.0, 0.0}; // {m, m, m}
+                union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
+                struct Asv* asv2 = asv_new(asv_spec, sea, position2, attitude2);
+                asv_set_surge_sway_halt(asv2, true);
+
+                // Init and run simulation
+                Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
+                simulation.run_headless();
+
+                // Clear memory
+                asv_delete(asv1);
+                asv_delete(asv2);
+            }
+
+            // Clear memory
+            sea_surface_delete(sea);
+        }
+    }
+}
+
+
+int main()
+{
+    // ASV spec
+    struct Asv_specification asv_spec {
+        2.1 , // L_wl (m)
+        0.6,  // B_wl (m)
+        0.25, // D (m)
+        0.09, // T (m)
+        4.0,  // max_speed (m/s)
+        0.09, // disp (m3)
+        0.2,  // r_roll (m)
+        0.6,  // r_pitch (m)
+        0.6,  // r_yaw (m)
+        {1.05, 0.0, -0.2} // cog {m, m, m} 
+    };
+    bool is_surge_sway_halt_set = true;
+
+    run_headless(asv_spec, is_surge_sway_halt_set);
+}
 
 
 // int main()
