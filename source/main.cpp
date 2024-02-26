@@ -40,6 +40,10 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 
 int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 {
+    std::ofstream fout;
+    fout.open("log.csv");
+    fout << "hs,seed,ant_ht,time,clearence\n";
+
     // Initialise the sea surface
     for(double wave_hs = 0.5; wave_hs < 16.0; wave_hs+=1.0)
     {
@@ -67,7 +71,7 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 
                 // Init and run simulation
                 Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
-                simulation.run_headless();
+                simulation.run_headless(fout);
 
                 // Clear memory
                 asv_delete(asv1);
@@ -78,6 +82,8 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
             sea_surface_delete(sea);
         }
     }
+
+    fout.close();
 }
 
 

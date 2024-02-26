@@ -4,7 +4,6 @@
 #include "simulate_LOS.h"
 
 #include <iostream>
-#include <fstream>
 
 namespace plt = matplotlibcpp;
 
@@ -303,12 +302,8 @@ void Simulate_LOS::run()
     }
 }
 
-void Simulate_LOS::run_headless()
+void Simulate_LOS::run_headless(std::ofstream& fout)
 {
-    std::ofstream fout;
-    fout.open("log.csv", std::ios::out | std::ios::app);
-    fout << "hs, seed, ant_ht, time, clearence \n";
-
     double sig_wave_height = sea_surface_get_significant_height(this->sea);
     int seed = sea_surface_get_rand_seed(this->sea);  
     std::cout<< sig_wave_height << " " << seed << " " << this->antenna_height << "\n";   
@@ -363,7 +358,6 @@ void Simulate_LOS::run_headless()
             }
         }
         // Write to file
-        fout << sig_wave_height << ", " << seed << ", " << this->antenna_height << ", " << time << ", " << min_clearence_current_timestep << " \n";
+        fout << sig_wave_height << "," << seed << "," << this->antenna_height << "," << time << "," << min_clearence_current_timestep << "\n";
     }
-    fout.close();
 }

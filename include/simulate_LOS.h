@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <array>
+#include <fstream>
 
 extern "C" 
 {
@@ -18,7 +19,7 @@ class Simulate_LOS{
 public:
     Simulate_LOS(struct Sea_surface* sea, struct Asv* asv1, struct Asv* asv2, double antenna_height);
     void run();  
-    void run_headless();
+    void run_headless(std::ofstream& fout);
 
 private:
     void create_equidistant_points(const union Coordinates_3D& p1, 
