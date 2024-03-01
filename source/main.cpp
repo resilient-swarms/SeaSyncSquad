@@ -42,11 +42,9 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 
 int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 {
-    std::ofstream fout;
-
-    // Initialise the sea surface
     for(double antenna_height = 1.0; antenna_height < 5.0; antenna_height+=0.5)
     {
+        std::ofstream fout;
         std::string file_name = "../results/log_";
         file_name += fmt::format("{:.1f}", antenna_height) + "_.csv";
         fout.open(file_name);
