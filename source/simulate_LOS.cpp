@@ -306,11 +306,7 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
 {
     double sig_wave_height = sea_surface_get_significant_height(this->sea);
     double wave_dp = sea_surface_get_predominant_heading(this->sea);
-    int seed = sea_surface_get_rand_seed(this->sea);  
-    std::cout<< this->antenna_height << ", " 
-             << sig_wave_height << ", " 
-             << wave_dp << ", " 
-             << seed << "\n";   
+    int seed = sea_surface_get_rand_seed(this->sea);    
 
     double simulation_length = 15.0 * 60.0; // sec
     for(double time = 0; time < simulation_length; time+=this->time_step_size/1000.0)

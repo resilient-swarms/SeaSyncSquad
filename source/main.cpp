@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <thread>
 #include <fmt/core.h>
 #include "simulate_LOS.h"
 
@@ -42,50 +43,71 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 
 int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 {
-    for(double antenna_height = 1.0; antenna_height < 5.0; antenna_height+=0.5)
+    // Lambda function to run the simulation in threads
+    auto run_in_thread = [&](double antenna_height, double wave_hs, double wave_dp, int wave_rand_seed)
     {
         std::ofstream fout;
         std::string file_name = "../results/log_";
-        file_name += fmt::format("{:.1f}", antenna_height) + "_.csv";
+        file_name += fmt::format("{:.1f}", antenna_height) + "_" +
+                     fmt::format("{:.1f}", wave_hs) + "_" +
+                     fmt::format("{:.1f}", wave_dp) + "_" +
+                     std::to_string(wave_rand_seed) + "_.csv";
         fout.open(file_name);
         fout << "ant_ht,hs,wave_dp,seed,time,clearence\n";
 
+        // Init sea surface
+        int count_component_waves = 21; 
+        struct Sea_surface* sea = sea_surface_new(wave_hs, wave_dp, wave_rand_seed, count_component_waves);
+    
+        // Init ASV-1
+        union Coordinates_3D position1 {100.0, 100.0, 0.0}; // {m, m, m}
+        union Coordinates_3D attitude1 {0.0, 0.0, 0.0}; // {rad, rad, rad}
+        struct Asv* asv1 = asv_new(asv_spec, sea, position1, attitude1);
+        asv_set_surge_sway_halt(asv1, is_surge_sway_halt_set);
+
+        // Init ASV-2
+        // union Coordinates_3D position2 {3018.09765625, 3010.44873046875, 0.0}; // {m, m, m}
+        union Coordinates_3D position2 {200.0, 100.0, 0.0}; // {m, m, m}
+        union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
+        struct Asv* asv2 = asv_new(asv_spec, sea, position2, attitude2);
+        asv_set_surge_sway_halt(asv2, true);
+
+        // Init and run simulation
+        Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
+        simulation.run_headless(fout);
+
+        // Clear memory
+        sea_surface_delete(sea);
+        asv_delete(asv1);
+        asv_delete(asv2);
+        fout.close();
+    };
+
+    // Spawn and execute the threads
+    for(double antenna_height = 1.0; antenna_height < 5.0; antenna_height+=0.5)
+    {
+        std::cout<<"Simulations for antenna height = "<< fmt::format("{:.1f}", antenna_height) << "\n";
+    
+        std::vector<std::thread*> threads;
         for(double wave_hs = 0.5; wave_hs < 16.0; wave_hs+=1.0)
         {
             for(double wave_dp = 0.0; wave_dp < 2*PI; wave_dp+=PI/6.0)
             {
                 for(int wave_rand_seed = 1; wave_rand_seed < 6; wave_rand_seed++)
                 {
-                    // Init sea surface
-                    int count_component_waves = 21; 
-                    struct Sea_surface* sea = sea_surface_new(wave_hs, wave_dp, wave_rand_seed, count_component_waves);
-              
-                    // Init ASV-1
-                    union Coordinates_3D position1 {100.0, 100.0, 0.0}; // {m, m, m}
-                    union Coordinates_3D attitude1 {0.0, 0.0, 0.0}; // {rad, rad, rad}
-                    struct Asv* asv1 = asv_new(asv_spec, sea, position1, attitude1);
-                    asv_set_surge_sway_halt(asv1, is_surge_sway_halt_set);
-
-                    // Init ASV-2
-                    // union Coordinates_3D position2 {3018.09765625, 3010.44873046875, 0.0}; // {m, m, m}
-                    union Coordinates_3D position2 {200.0, 100.0, 0.0}; // {m, m, m}
-                    union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
-                    struct Asv* asv2 = asv_new(asv_spec, sea, position2, attitude2);
-                    asv_set_surge_sway_halt(asv2, true);
-
-                    // Init and run simulation
-                    Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
-                    simulation.run_headless(fout);
-
-                    // Clear memory
-                    sea_surface_delete(sea);
-                    asv_delete(asv1);
-                    asv_delete(asv2);
+                    std::thread* thread_object = new std::thread(run_in_thread, antenna_height, wave_hs, wave_dp, wave_rand_seed);
+                    threads.push_back(thread_object);
                 }
             }
         }
-
-        fout.close();
+        for(auto thread : threads)
+        {
+            thread->join();
+        }
+        for(auto thread : threads)
+        {
+            delete thread;
+        }
     }
 }
 
