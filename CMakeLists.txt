@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.27)
-project(seasyncsquad)
-
-set(CMAKE_CXX_STANDARD 17)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.27)
+PROJECT(seasyncsquad)
 
 # ENABLE MULTI-THREADING
 # --------------------------------------
@@ -37,7 +35,7 @@ INCLUDE_DIRECTORIES(
 # ------------
 SET( SOURCE
         source/main.cpp
-        source/Simulate_LOS.cpp
+        source/simulate_LOS.cpp
         dependency/ASVLite/source/errors.c
         dependency/ASVLite/source/geometry.c
         dependency/ASVLite/source/regular_wave.c
@@ -57,11 +55,13 @@ ADD_EXECUTABLE(seasyncsquad ${SOURCE})
 
 # LINK LIBRARIES
 # --------------
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-find_package(Python3 COMPONENTS NumPy REQUIRED)
-find_package(fmt REQUIRED)
+FIND_PACKAGE(Threads REQUIRED)
+FIND_PACKAGE(Python3 COMPONENTS Interpreter Development REQUIRED)
+FIND_PACKAGE(Python3 COMPONENTS NumPy REQUIRED)
+FIND_PACKAGE(fmt REQUIRED)
+
+SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 TARGET_LINK_LIBRARIES(seasyncsquad
         m
         Threads::Threads
