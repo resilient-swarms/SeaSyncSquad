@@ -48,7 +48,8 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
     {
         std::ofstream fout;
         std::string file_name = "../results/log_";
-        file_name += fmt::format("{:.1f}", antenna_height) + "_" +
+        file_name += std::to_string((int)distance) + "_" +
+                     std::to_string((int)antenna_height) + "_" +
                      fmt::format("{:.1f}", wave_hs) + "_" +
                      fmt::format("{:.1f}", wave_dp) + "_" +
                      std::to_string(wave_rand_seed) + "_.csv";
