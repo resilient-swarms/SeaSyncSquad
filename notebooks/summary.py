@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import math
 
 f = open("../results/summary.csv", "w")
 f.write("dist(m),ant_ht(m),hs(m),wave_dp(rad),peak_wave_len(m),dist_wave_len_ratio,seed,med_clr_win(sec),mean_clr_win(sec),std_clr_win(sec),med_ob_win(sec),mean_ob_win(sec),std_ob_win(sec)\n")
@@ -20,7 +21,7 @@ for dist in np.arange(100.0, 300.0, 10.0):
                     previous_clearence_diff = None
                     for index, row in df.iterrows():
                         fresnel_min_required_clearence = 60.0
-                        clearence = row["clearence"]
+                        clearence = row["clearence(%)"]
                         clearence_diff = clearence - fresnel_min_required_clearence
                         if previous_clearence_diff == None:
                             previous_clearence_diff = clearence_diff
@@ -48,16 +49,16 @@ for dist in np.arange(100.0, 300.0, 10.0):
                         else:
                             obstructed_window_lengths.append(window_length)
                     # Peak wave length
-                    peak_wave_len = df["peak_wave_len(m)"].avg()
+                    peak_wave_len = df["peak_wave_len(m)"].mean()
                     # Write summary to file
                     f.write("{dist},{ant_ht},{hs},{wave_dp},{peak_wave_len},{dist_wave_len_ratio},{seed},{med_clr_win:0.2f},{mean_clr_win:0.2f},{std_clr_win:0.2f},{med_ob_win:0.2f},{mean_ob_win:0.2f},{std_ob_win:0.2f}\n".format(
-                        dist=dist
+                        dist=dist,
                         ant_ht=ant_ht,
-                        hs=hs,
+                        hs=wave_hs,
                         wave_dp=wave_dp,
                         peak_wave_len=peak_wave_len,
                         dist_wave_len_ratio=dist/peak_wave_len,
-                        seed=seed,
+                        seed=rand_seed,
                         med_clr_win=np.median(clear_window_lengths),
                         mean_clr_win=np.mean(clear_window_lengths),
                         std_clr_win=np.std(clear_window_lengths),
