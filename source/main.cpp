@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <cmath>
 #include <fmt/core.h>
 #include "simulate_LOS.h"
 
@@ -50,8 +51,8 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
         std::string file_name = "../results/log_";
         file_name += std::to_string((int)distance) + "_" +
                      std::to_string((int)antenna_height) + "_" +
-                     fmt::format("{:.1f}", wave_hs) + "_" +
-                     fmt::format("{:.1f}", wave_dp) + "_" +
+                     std::to_string((int)wave_hs) + "_" +
+                     std::to_string((int)round(wave_dp*180.0/PI)) + "_" +
                      std::to_string(wave_rand_seed) + "_.csv";
         fout.open(file_name);
         fout << "dist(m),ant_ht(m),hs(m),wave_dp(rad),peak_wave_len(m),seed,time(sec),clearence(%)\n";
@@ -86,19 +87,19 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
     };
 
     // Spawn and execute the threads
-    for(double distance = 100; distance < 300; distance+=10)
+    for(double distance = 100; distance <= 600; distance+=10)
     {
-        for(double antenna_height = 1.0; antenna_height < 5.0; antenna_height+=1.0)
+        for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height+=1.0)
         {
             std::cout<<"Simulations for distance = " << fmt::format("{:.1f}",distance) <<", antenna height = "<< fmt::format("{:.1f}", antenna_height) << "\n";
 
-            for(double wave_hs = 0.5; wave_hs < 11.0; wave_hs+=1.0)
+            for(double wave_hs = 1.0; wave_hs <= 9.0; wave_hs+=1.0)
             {
                 std::vector<std::thread*> threads;
 
-                for(double wave_dp = 0.0; wave_dp < 2*PI; wave_dp+=PI/6.0)
+                for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp+=PI/6.0)
                 {
-                    for(int wave_rand_seed = 1; wave_rand_seed < 6; wave_rand_seed++)
+                    for(int wave_rand_seed = 10; wave_rand_seed <= 14 ; wave_rand_seed++)
                     {
                         std::thread* thread_object = new std::thread(run_in_thread, distance, antenna_height, wave_hs, wave_dp, wave_rand_seed);
                         threads.push_back(thread_object);
