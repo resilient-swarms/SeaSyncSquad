@@ -2,6 +2,7 @@
 #include <string>
 #include <thread>
 #include <cmath>
+#include <algorithm>
 #include <fmt/core.h>
 #include "simulate_LOS.h"
 
@@ -86,37 +87,61 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
         fout.close();
     };
 
-    // Spawn and execute the threads
+    // Define the simulations to run
+    std::vector<double> distances;
+    std::vector<double> antenna_heights;
+    std::vector<double> wave_hss;
+    std::vector<double> wave_dps;
+    std::vector<int> wave_rand_seeds;
     for(double distance = 100; distance <= 600; distance+=10)
     {
         for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height+=1.0)
         {
-            std::cout<<"Simulations for distance = " << fmt::format("{:.1f}",distance) <<", antenna height = "<< fmt::format("{:.1f}", antenna_height) << "\n";
-
             for(double wave_hs = 1.0; wave_hs <= 9.0; wave_hs+=1.0)
             {
-                std::vector<std::thread*> threads;
-
                 for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp+=PI/6.0)
                 {
                     for(int wave_rand_seed = 10; wave_rand_seed <= 14 ; wave_rand_seed++)
                     {
-                        std::thread* thread_object = new std::thread(run_in_thread, distance, antenna_height, wave_hs, wave_dp, wave_rand_seed);
-                        threads.push_back(thread_object);
+                        distances.push_back(distance);
+                        antenna_heights.push_back(antenna_height);
+                        wave_hss.push_back(wave_hs);
+                        wave_dps.push_back(wave_dp);
+                        wave_rand_seeds.push_back(wave_rand_seed);
                     }
-                }
-
-                for(auto thread : threads)
-                {
-                    thread->join();
-                }
-                for(auto thread : threads)
-                {
-                    delete thread;
                 }
             }
         }
     }
+
+    // Spawn the threads and run simulations.
+    int count_total_threads = std::thread::hardware_concurrency();
+    std::cout<<"Hardware concurrency = "<<count_total_threads<<"\n";
+    int count_total_simulations = distances.size();
+    int count_remaining_simulations = count_total_simulations;
+    int i = 0;
+    while(i < count_total_simulations)
+    {
+        std::vector<std::thread*> threads;
+        for(int j = 0; j < std::min(count_total_threads, count_remaining_simulations); ++j)
+        {
+            std::cout<<"Distance = "<<distances[i]<<", antenna height = "<<antenna_heights[i]<<", hs = "<<wave_hss[i]<<", dp = "<<wave_dps[i]*180/PI<<", rand seed = "<<wave_rand_seeds[i]<<"\n";
+            std::thread* thread_object = new std::thread(run_in_thread, distances[i], antenna_heights[i], wave_hss[i], wave_dps[i], wave_rand_seeds[i]);
+            ++i;
+            --count_remaining_simulations;
+            threads.push_back(thread_object);
+        }
+        for(auto thread : threads)
+        {
+            thread->join();
+        }
+        for(auto thread : threads)
+        {
+            delete thread;
+        } 
+        threads.clear();
+        std::cout<<"\n";
+    } 
 }
 
 
