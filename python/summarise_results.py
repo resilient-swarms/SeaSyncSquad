@@ -35,7 +35,7 @@ def summarise_1():
             for wave_hs in np.arange(1.0, 10.0, 1.0):
                 for wave_dp_index in range(4):
                     wave_dp = wave_dp_index * 30 # deg
-                    for rand_seed in range(10, 15, 1):
+                    for rand_seed in range(10, 20, 1):
                         file_name = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
                         print("Summarising - ", file_name)
                         df = pd.read_csv(file_name)
@@ -43,37 +43,34 @@ def summarise_1():
                         clear_window_lengths = [] # sec
                         obstructed_window_lengths = [] # sec
                         window_length = 0
+                        fresnel_min_required_clearence = 60.0
                         previous_clearence_diff = None
                         is_this_the_first_window = True
                         for index, row in df.iterrows():
-                            fresnel_min_required_clearence = 60.0
                             clearence = row["clearence(%)"]
                             clearence_diff = clearence - fresnel_min_required_clearence
                             if previous_clearence_diff == None:
                                 previous_clearence_diff = clearence_diff
+                                continue
                             else:
                                 time_step_size  = 40.0/1000 # sec
                                 window_length += time_step_size 
                                 if previous_clearence_diff * clearence_diff < 0.0:
                                     # Clearence window changing
-                                    if previous_clearence_diff > 0.0:
-                                        if is_this_the_first_window:
-                                            # Ignore the first window since it is partial
-                                            is_this_the_first_window = False 
-                                        else:
-                                            clear_window_lengths.append(window_length)
-                                            previous_clearence_diff = clearence_diff
-                                            window_length = 0.0
-                                    elif previous_clearence_diff < 0.0:
-                                        if is_this_the_first_window:
-                                            # Ignore the first window since it is partial
-                                            is_this_the_first_window = False 
-                                        else:
-                                            obstructed_window_lengths.append(window_length)
-                                            previous_clearence_diff = clearence_diff
-                                            window_length = 0.0
+                                    if is_this_the_first_window:
+                                        # Ignore the first window since it is partial
+                                        is_this_the_first_window = False
                                     else:
-                                        continue
+                                        if previous_clearence_diff > 0.0:
+                                            clear_window_lengths.append(window_length)
+                                        elif previous_clearence_diff < 0.0:
+                                            obstructed_window_lengths.append(window_length)
+                                        else:
+                                            # This can never be the case since "previous_clearence_diff * clearence_diff < 0.0"
+                                            # i.e both previous_clearence_diff and clearence_diff are non-zero values. 
+                                            pass
+                                    previous_clearence_diff = clearence_diff
+                                    window_length = 0.0
                                 else:
                                     previous_clearence_diff = clearence_diff
                         # # Enter the final reading too
@@ -112,21 +109,21 @@ def summarise_2():
     for (dist, ant_ht, hs, wave_dp), group in groups:
         peak_wave_len = group["peak_wave_len(m)"].mean()
         dist_wave_len_ratio = group["dist_wave_len_ratio"].mean()
-        cv_med_clr_win  = np.nan if group["med_clr_win(sec)"].isnull().values.any() else group["med_clr_win(sec)"].mean()
-        cv_mean_clr_win = np.nan if group["mean_clr_win(sec)"].isnull().values.any() else group["med_clr_win(sec)"].mean()
-        cv_med_ob_win   = np.nan if group["med_ob_win(sec)"].isnull().values.any() else group["med_clr_win(sec)"].mean()
-        cv_mean_ob_win  = np.nan if group["mean_ob_win(sec)"].isnull().values.any() else group["med_clr_win(sec)"].mean()
-        f.write("{dist},{ant_ht},{hs},{wave_dp},{peak_wave_len},{dist_wave_len_ratio},{cv_med_clr_win},{cv_mean_clr_win},{cv_med_ob_win},{cv_mean_ob_win}\n".format(
+        med_clr_win  = np.nan if np.isnan(group["med_clr_win(sec)"]).any() else group["med_clr_win(sec)"].mean()
+        mean_clr_win = np.nan if np.isnan(group["mean_clr_win(sec)"]).any() else group["med_clr_win(sec)"].mean()
+        med_ob_win   = np.nan if np.isnan(group["med_ob_win(sec)"]).any() else group["med_clr_win(sec)"].mean()
+        mean_ob_win  = np.nan if np.isnan(group["mean_ob_win(sec)"]).any() else group["med_clr_win(sec)"].mean()
+        f.write("{dist},{ant_ht},{hs},{wave_dp},{peak_wave_len},{dist_wave_len_ratio},{med_clr_win},{mean_clr_win},{med_ob_win},{mean_ob_win}\n".format(
             dist=dist,
             ant_ht=ant_ht,
             hs=hs,
             wave_dp=wave_dp,
             peak_wave_len=peak_wave_len,
             dist_wave_len_ratio=dist_wave_len_ratio,
-            cv_med_clr_win=cv_med_clr_win,
-            cv_mean_clr_win=cv_mean_clr_win,
-            cv_med_ob_win=cv_med_ob_win,
-            cv_mean_ob_win=cv_mean_ob_win
+            med_clr_win=med_clr_win,
+            mean_clr_win=mean_clr_win,
+            med_ob_win=med_ob_win,
+            mean_ob_win=mean_ob_win
         ))
     f.close()
 
@@ -134,16 +131,16 @@ def summarise_2():
 def report_coeff_variation(report):
     report.write_heading("Variations in different runs of the experiment")
     f_coeff_variation = open(dir_report.joinpath("coeff_variation.csv"), "w")
-    f_coeff_variation.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),cv_med_clr_win(%),cv_mean_clr_win(%),cv_med_ob_win(%),cv_mean_ob_win(%)\n")
+    f_coeff_variation.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),med_clr_wins,cv_med_clr_win(%),cv_mean_clr_win(%),cv_med_ob_win(%),cv_mean_ob_win(%)\n")
     file_name = dir_report.joinpath("summary_1.csv")
     df_summary = pd.read_csv(file_name)
     groups = df_summary.groupby(["dist(m)", "ant_ht(m)", "hs(m)", "wave_dp(deg)"])
     # Compute the coefficient of variations
     for (dist, ant_ht, hs, wave_dp), group in groups:
-        cv_med_clr_win  = group["med_clr_win(sec)"].std()/group["med_clr_win(sec)"].mean() * 100
-        cv_mean_clr_win = group["mean_clr_win(sec)"].std()/group["mean_clr_win(sec)"].mean() * 100
-        cv_med_ob_win   = group["med_ob_win(sec)"].std()/group["med_ob_win(sec)"].mean() * 100
-        cv_mean_ob_win  = group["mean_ob_win(sec)"].std()/group["mean_ob_win(sec)"].mean() * 100
+        cv_med_clr_win  = np.nan if np.isnan(group["med_clr_win(sec)"]).any() else group["med_clr_win(sec)"].std()/group["med_clr_win(sec)"].mean() * 100
+        cv_mean_clr_win = np.nan if np.isnan(group["mean_clr_win(sec)"]).any() else group["mean_clr_win(sec)"].std()/group["mean_clr_win(sec)"].mean() * 100
+        cv_med_ob_win   = np.nan if np.isnan(group["med_ob_win(sec)"]).any() else group["med_ob_win(sec)"].std()/group["med_ob_win(sec)"].mean() * 100
+        cv_mean_ob_win  = np.nan if np.isnan(group["mean_ob_win(sec)"]).any() else group["mean_ob_win(sec)"].std()/group["mean_ob_win(sec)"].mean() * 100
         f_coeff_variation.write("{dist},{ant_ht},{hs},{wave_dp},{cv_med_clr_win},{cv_mean_clr_win},{cv_med_ob_win},{cv_mean_ob_win}\n".format(
             dist=dist,
             ant_ht=ant_ht,
@@ -270,6 +267,6 @@ def generate_report(report):
 
 
 report = Report(dir_report.joinpath("report.md"))
-# summarise_1()
+summarise_1()
 summarise_2()
 generate_report(report)
