@@ -156,7 +156,7 @@ def report_coeff_variation(report):
     plt.clf()
     df = pd.read_csv(dir_report.joinpath("coeff_variation.csv"))
     columns=["cv_med_clr_win(%)", "cv_mean_clr_win(%)", "cv_med_ob_win(%)", "cv_mean_ob_win(%)"]
-    ax = sns.boxplot(data=df[columns])
+    ax = sns.boxplot(data=df[columns], showfliers=False)
     ax.set(ylabel="coefficient of variation (%)")
     plt.xticks(fontsize=8) # set the new x-axis labels
     plt.yticks(fontsize=8) # set the new y-axis label size
@@ -174,7 +174,7 @@ def report_hs_effect_on_communication(report):
     df_summary["bins"] = pd.cut(df_summary["hs/ant_ht"], bins)
     # Plot
     plt.clf()
-    ax = sns.boxplot(data=df_summary, x="bins", y="med_clr_win(sec)", showfliers=False)
+    ax = sns.boxenplot(data=df_summary, x="bins", y="med_clr_win(sec)", showfliers=False)
     ax.set(xlabel="wave ht / antenna ht", ylabel="median clear window (sec)")
     plt.xticks(fontsize=8) # set the new x-axis labels
     plt.yticks(fontsize=8) # set the new y-axis label size
@@ -182,7 +182,7 @@ def report_hs_effect_on_communication(report):
     plt.savefig(file_fig, dpi=200)
     report.write_image(file_fig)
     plt.clf()
-    ax = sns.boxplot(data=df_summary, x="bins", y="mean_clr_win(sec)", showfliers=False)
+    ax = sns.boxenplot(data=df_summary, x="bins", y="mean_clr_win(sec)", showfliers=False)
     ax.set(xlabel="wave ht / antenna ht", ylabel="mean clear window (sec)")
     plt.xticks(fontsize=8) # set the new x-axis labels
     plt.yticks(fontsize=8) # set the new y-axis label size
@@ -200,7 +200,7 @@ def report_wave_dp_effect_on_communication(report):
     df_summary["rel_wave_dp(deg)"] = 90 - df_summary["wave_dp(deg)"]
     # Plot
     plt.clf()
-    ax = sns.boxplot(data=df_summary, y="med_clr_win(sec)", x="rel_wave_dp(deg)", showfliers=False)
+    ax = sns.boxenplot(data=df_summary, y="med_clr_win(sec)", x="rel_wave_dp(deg)", showfliers=False)
     ax.set(xlabel="wave heading relative to the line joining the antennas (deg)", ylabel="median clear window (sec)")
     plt.xticks(fontsize=8) # set the new x-axis labels
     plt.yticks(fontsize=8) # set the new y-axis label size
@@ -208,7 +208,7 @@ def report_wave_dp_effect_on_communication(report):
     report.write_image(file_fig)
     plt.savefig(file_fig, dpi=200)
     plt.clf()
-    ax = sns.boxplot(data=df_summary, y="mean_clr_win(sec)", x="rel_wave_dp(deg)", showfliers=False)
+    ax = sns.boxenplot(data=df_summary, y="mean_clr_win(sec)", x="rel_wave_dp(deg)", showfliers=False)
     ax.set(xlabel="wave heading relative to the line joining the antennas (deg)", ylabel="mean clear window (sec)")
     plt.xticks(fontsize=8) # set the new x-axis labels
     plt.yticks(fontsize=8) # set the new y-axis label size
@@ -236,7 +236,7 @@ def report_dist_by_wave_len_effect_on_communication(report):
                                          (1.0, 1.2), (1.2, 1.4), (1.4, 1.6), (1.6, 1.8), (1.8, 2.0),
                                          (2.0, 2.2), (2.2, 2.4), (2.4, 2.6), (2.6, 2.8), (2.8, 3.0)])
     df_summary["bins"] = pd.cut(df_summary["dist/wave_len"], bins)
-    ax = sns.boxplot(data=df_summary, hue="bins", y="med_clr_win/max_win", x="rel_wave_dp(deg)", showfliers=False)
+    ax = sns.boxenplot(data=df_summary, hue="bins", y="med_clr_win/max_win", x="rel_wave_dp(deg)", showfliers=False)
     plt.legend(title='distance / wave length')
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
     ax.set(xlabel="distance / wave length", ylabel="median clear window (sec)")
@@ -247,7 +247,7 @@ def report_dist_by_wave_len_effect_on_communication(report):
     plt.savefig(file_fig, dpi=200)
     report.write_image(file_fig)
     plt.clf()
-    ax = sns.boxplot(data=df_summary, hue="bins", y="mean_clr_win/max_win", x="rel_wave_dp(deg)", showfliers=False)
+    ax = sns.boxenplot(data=df_summary, hue="bins", y="mean_clr_win/max_win", x="rel_wave_dp(deg)", showfliers=False)
     plt.legend(title='distance / wave length')
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
     ax.set(xlabel="distance / wave length", ylabel="mean clear window (sec)")
