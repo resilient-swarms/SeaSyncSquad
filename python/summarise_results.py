@@ -25,17 +25,21 @@ class Report:
     
     def write_image(self, image_path):
         self.f.write("![text1]({})\n".format(image_path))
-       
+
+dist_range = np.arange(100.0, 601.0, 10.0) # m
+ant_ht_range = np.arange(1, 6, 1) # m
+wave_hs_range = np.arange(1.0, 10.0, 1.0) # m
+wave_dp_range = np.arange(0, 91, 30) # deg   
+rand_seed_range = range(10, 20, 1)
 
 def summarise_1():
     f = open(dir_report.joinpath("summary_1.csv"), "w")
     f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),peak_wave_len(m),dist_wave_len_ratio,seed,med_clr_win(sec),mean_clr_win(sec),std_clr_win(sec),med_ob_win(sec),mean_ob_win(sec),std_ob_win(sec)\n")
-    for dist in np.arange(100.0, 601.0, 10.0):
-        for ant_ht in np.arange(1, 6, 1):
-            for wave_hs in np.arange(1.0, 10.0, 1.0):
-                for wave_dp_index in range(4):
-                    wave_dp = wave_dp_index * 30 # deg
-                    for rand_seed in range(10, 20, 1):
+    for dist in dist_range:
+        for ant_ht in ant_ht_range:
+            for wave_hs in wave_hs_range:
+                for wave_dp in wave_dp_range:
+                    for rand_seed in rand_seed_range:
                         file_name = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
                         print("Summarising - ", file_name)
                         df = pd.read_csv(file_name)
@@ -258,15 +262,78 @@ def report_dist_by_wave_len_effect_on_communication(report):
     plt.savefig(file_fig, dpi=200)
     report.write_image(file_fig)
 
+
+def report_communication_quality():
+    f = open(dir_report.joinpath("summary_comms.csv"), "w")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,transmission_period(sec),quiet_period(sec),duty_cycle,total_transmission_cycles,good_tranmission_cycles,good_transmission_probability\n")
+    df_summary_1 = pd.DataFrame(columns=[""])
+    df_summary_1["count_transmission_cycles"] = np.nan
+    df_summary_1["count_good_transmission_cycles"] = np.nan
+    for dist in dist_range:
+        for ant_ht in ant_ht_range:
+            for wave_hs in wave_hs_range:
+                for wave_dp in wave_dp_range:
+                    for rand_seed in rand_seed_range:
+                        file_name = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+                        print("Analysing transmission periods and duty cycles for ", file_name)
+                        df = pd.read_csv(file_name)
+                        # Increase the transmission period in multiples of the simulation time step (40 ms) 
+                        # to ensure each time step remains consistently in either transmission or quiet mode.
+                        simulation_time_step = 40 # milli sec
+                        num_sim_time_steps_per_trans_period = 25
+                        transmission_period_increment = simulation_time_step/1000 * num_sim_time_steps_per_trans_period # 1 sec
+                        fresnel_min_required_clearence = 60.0
+                        for transmission_period in (transmission_period_increment, 10.0, transmission_period_increment):
+                            for duty_cycle in np.arange(0.01, 1.0, 0.01):
+                                total_period = transmission_period / duty_cycle
+                                quiet_period = total_period - transmission_period
+                                is_comm_quality_good = True
+                                count_sim_time_steps_per_trans_period = 0
+                                is_current_cycle_transmission = True 
+                                transmission_cycle_counter = 0
+                                good_transmission_cycle_counter = 0
+                                for index, row in df.iterrows():
+                                    clearence = row["clearence(%)"]
+                                    if count_sim_time_steps_per_trans_period == num_sim_time_steps_per_trans_period:
+                                        if is_current_cycle_transmission:
+                                            transmission_cycle_counter += 1
+                                            good_transmission_cycle_counter += 1 if is_comm_quality_good else 0
+                                        # reset the counters and flags
+                                        count_sim_time_steps_per_trans_period = 0
+                                        is_comm_quality_good = True
+                                        # toggle transmission/quiet cycle
+                                        is_current_cycle_transmission = not(is_current_cycle_transmission)
+                                    if is_current_cycle_transmission:
+                                        is_comm_quality_good = is_comm_quality_good and (clearence >= fresnel_min_required_clearence)
+                                        count_sim_time_steps_per_trans_period += 1 
+                                    else:
+                                        count_sim_time_steps_per_trans_period += 1 
+                                # Record stats
+                                f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{trans_period},{quiet_period},{duty_cycle},{total_trans},{good_trans},{good_trans_prob:0.2f}\n".format(
+                                        dist=dist,
+                                        ant_ht=ant_ht,
+                                        hs=wave_hs,
+                                        wave_dp=wave_dp,
+                                        seed=rand_seed,
+                                        trans_period=transmission_period,
+                                        quiet_period=quiet_period,
+                                        duty_cycle=duty_cycle,
+                                        total_trans=transmission_cycle_counter,
+                                        good_trans=good_transmission_cycle_counter,
+                                        good_trans_prob=good_transmission_cycle_counter/transmission_cycle_counter
+                                        ))  
+    f.close()
+
 def generate_report(report):
-    report_coeff_variation(report)    
-    report_hs_effect_on_communication(report)
-    report_wave_dp_effect_on_communication(report)
-    report_dist_by_wave_len_effect_on_communication(report)
+    # report_coeff_variation(report)    
+    # report_hs_effect_on_communication(report)
+    # report_wave_dp_effect_on_communication(report)
+    # report_dist_by_wave_len_effect_on_communication(report)
+    report_communication_quality()
 
 
 
 report = Report(dir_report.joinpath("report.md"))
-summarise_1()
-summarise_2()
+# summarise_1()
+# summarise_2()
 generate_report(report)
