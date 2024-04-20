@@ -4,12 +4,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib
+import multiprocessing
 
 module_dir = pathlib.Path(__file__).parent.resolve()
 root_dir = module_dir.parent
 dir_results = root_dir.joinpath("results")
 dir_report = dir_results.joinpath("report")
 dir_report.mkdir(parents=True, exist_ok=True)
+dir_comms = dir_results.joinpath("comms")
+dir_comms.mkdir(parents=True, exist_ok=True)
 dir_fig = dir_results.joinpath("fig")
 dir_fig.mkdir(parents=True, exist_ok=True)
 
@@ -263,66 +266,109 @@ def report_dist_by_wave_len_effect_on_communication(report):
     report.write_image(file_fig)
 
 
+def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
+    # Increase the transmission and quiet period in multiples of the simulation time step (40 ms) 
+    # to ensure each time step remains consistently in either transmission or quiet mode.
+    simulation_time_step = 40 # milli sec
+    num_sim_time_steps_per_trans_period = 25
+    cycle_increment = simulation_time_step/1000 * num_sim_time_steps_per_trans_period # 1 sec
+    fresnel_min_required_clearence = 60.0
+    results = []
+    for transmission_period in np.arange(cycle_increment, 10.0, cycle_increment):
+        for quiet_period in np.arange(cycle_increment, 10.0, cycle_increment):
+            for rand_seed in rand_seed_range:
+                file_name = "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+                file_path = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+                df = pd.read_csv(file_path)
+                total_period = transmission_period + quiet_period
+                duty_cycle = transmission_period/total_period
+                is_comm_quality_good = True
+                count_sim_time_steps_per_trans_period = 0
+                is_current_cycle_transmission = True 
+                transmission_cycle_counter = 0
+                good_transmission_cycle_counter = 0
+                for index, row in df.iterrows():
+                    clearence = row["clearence(%)"]
+                    if count_sim_time_steps_per_trans_period == num_sim_time_steps_per_trans_period:
+                        if is_current_cycle_transmission:
+                            transmission_cycle_counter += 1
+                            good_transmission_cycle_counter += 1 if is_comm_quality_good else 0
+                        # reset the counters and flags
+                        count_sim_time_steps_per_trans_period = 0
+                        is_comm_quality_good = True
+                        # toggle transmission/quiet cycle
+                        is_current_cycle_transmission = not(is_current_cycle_transmission)
+                    if is_current_cycle_transmission:
+                        is_comm_quality_good = is_comm_quality_good and (clearence >= fresnel_min_required_clearence)
+                        count_sim_time_steps_per_trans_period += 1 
+                    else:
+                        count_sim_time_steps_per_trans_period += 1 
+                # Record stats
+                result = {"dist":dist,
+                        "ant_ht":ant_ht,
+                        "hs":wave_hs,
+                        "wave_dp":wave_dp,
+                        "seed":rand_seed,
+                        "trans_period":transmission_period,
+                        "quiet_period":quiet_period,
+                        "duty_cycle":duty_cycle,
+                        "total_trans":transmission_cycle_counter,
+                        "good_trans":good_transmission_cycle_counter,
+                        "good_trans_prob":good_transmission_cycle_counter/transmission_cycle_counter
+                        }
+                results.append(result)
+    # Write result to file
+    file_name = "/comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
+    file_path = str(dir_comms) + file_name
+    f = open(file_path, "w")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,transmission_period(sec),quiet_period(sec),duty_cycle,total_transmission,good_transmissions,good_transmissions_probability\n")
+    for result in results:
+        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{trans_period},{quiet_period},{duty_cycle},{total_trans},{good_trans},{good_trans_prob:0.2f}\n".format(
+                dist=result["dist"],
+                ant_ht=result["ant_ht"],
+                hs=result["hs"],
+                wave_dp=result["wave_dp"],
+                seed=result["seed"],
+                trans_period=result["trans_period"],
+                quiet_period=result["quiet_period"],
+                duty_cycle=result["duty_cycle"],
+                total_trans=result["total_trans"],
+                good_trans=result["good_trans"],
+                good_trans_prob=result["good_trans_prob"]
+                ))  
+    f.close()
+
+
 def report_communication_quality():
-    f = open(dir_report.joinpath("summary_comms.csv"), "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,transmission_period(sec),quiet_period(sec),duty_cycle,total_transmission_cycles,good_tranmission_cycles,good_transmission_probability\n")
-    df_summary_1 = pd.DataFrame(columns=[""])
-    df_summary_1["count_transmission_cycles"] = np.nan
-    df_summary_1["count_good_transmission_cycles"] = np.nan
+    jobs = []
+    # Create jobs
     for dist in dist_range:
         for ant_ht in ant_ht_range:
             for wave_hs in wave_hs_range:
                 for wave_dp in wave_dp_range:
-                    for rand_seed in rand_seed_range:
-                        file_name = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
-                        print("Analysing transmission periods and duty cycles for ", file_name)
-                        df = pd.read_csv(file_name)
-                        # Increase the transmission period in multiples of the simulation time step (40 ms) 
-                        # to ensure each time step remains consistently in either transmission or quiet mode.
-                        simulation_time_step = 40 # milli sec
-                        num_sim_time_steps_per_trans_period = 25
-                        transmission_period_increment = simulation_time_step/1000 * num_sim_time_steps_per_trans_period # 1 sec
-                        fresnel_min_required_clearence = 60.0
-                        for transmission_period in (transmission_period_increment, 10.0, transmission_period_increment):
-                            for duty_cycle in np.arange(0.01, 1.0, 0.01):
-                                total_period = transmission_period / duty_cycle
-                                quiet_period = total_period - transmission_period
-                                is_comm_quality_good = True
-                                count_sim_time_steps_per_trans_period = 0
-                                is_current_cycle_transmission = True 
-                                transmission_cycle_counter = 0
-                                good_transmission_cycle_counter = 0
-                                for index, row in df.iterrows():
-                                    clearence = row["clearence(%)"]
-                                    if count_sim_time_steps_per_trans_period == num_sim_time_steps_per_trans_period:
-                                        if is_current_cycle_transmission:
-                                            transmission_cycle_counter += 1
-                                            good_transmission_cycle_counter += 1 if is_comm_quality_good else 0
-                                        # reset the counters and flags
-                                        count_sim_time_steps_per_trans_period = 0
-                                        is_comm_quality_good = True
-                                        # toggle transmission/quiet cycle
-                                        is_current_cycle_transmission = not(is_current_cycle_transmission)
-                                    if is_current_cycle_transmission:
-                                        is_comm_quality_good = is_comm_quality_good and (clearence >= fresnel_min_required_clearence)
-                                        count_sim_time_steps_per_trans_period += 1 
-                                    else:
-                                        count_sim_time_steps_per_trans_period += 1 
-                                # Record stats
-                                f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{trans_period},{quiet_period},{duty_cycle},{total_trans},{good_trans},{good_trans_prob:0.2f}\n".format(
-                                        dist=dist,
-                                        ant_ht=ant_ht,
-                                        hs=wave_hs,
-                                        wave_dp=wave_dp,
-                                        seed=rand_seed,
-                                        trans_period=transmission_period,
-                                        quiet_period=quiet_period,
-                                        duty_cycle=duty_cycle,
-                                        total_trans=transmission_cycle_counter,
-                                        good_trans=good_transmission_cycle_counter,
-                                        good_trans_prob=good_transmission_cycle_counter/transmission_cycle_counter
-                                        ))  
-    f.close()
+                    # Create all jobs
+                    p = multiprocessing.Process(target=evaluate_communication_quality, args=(dist, ant_ht, wave_hs, wave_dp))
+                    jobs.append(p)
+    # Process jobs
+    max_pool_size = multiprocessing.cpu_count()
+    jobs_start_index = 0
+    jobs_end_index = 0
+    while jobs_end_index < len(jobs):
+        print("\n")
+        count_jobs_remaining = len(jobs) - jobs_end_index
+        jobs_end_index = jobs_start_index + min(max_pool_size, count_jobs_remaining)
+        process_pool = []
+        # Spawn threads
+        for i in range(jobs_start_index, jobs_end_index):
+            print("proceccsing job {}".format(i))
+            process_pool.append(jobs[i])
+            jobs[i].start()
+        # Join threads
+        for i in range(jobs_start_index, jobs_end_index):
+            print("joining job {}".format(i))
+            jobs[i].join()
+        jobs_start_index = jobs_end_index
+
 
 def generate_report(report):
     # report_coeff_variation(report)    
@@ -332,8 +378,12 @@ def generate_report(report):
     report_communication_quality()
 
 
-
 report = Report(dir_report.joinpath("report.md"))
 # summarise_1()
 # summarise_2()
 generate_report(report)
+
+
+# open files                          (-n) 1024
+# ulimit -Sn 10000
+# 
