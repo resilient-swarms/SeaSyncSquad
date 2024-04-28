@@ -358,35 +358,74 @@ def run_comms():
             jobs[i].join()
         jobs_start_index = jobs_end_index
 
-def report_comms_quality():
+def report_comms_quality(report):
+    report.write_heading("Analysing comms simulations")
+    # Summarise the comms simulations to a file.
     file_name = "/summary_comms.csv"
     file_path = str(dir_report) + file_name
     f = open(file_path, "w")
-    f.write("max_prob,min_prob,range\n")
-    for file in dir_comms.iterdir():
-        print(file)
-        df = pd.read_csv(str(file))
-        max_prob = df["good_transmissions_probability"].max()
-        min_prob = df["good_transmissions_probability"].min()
-        range = max_prob - min_prob
-        f.write("{max},{min},{range}\n".format(max=max_prob, min=min_prob, range=range))
-    # Box plot
+    f.write("distance(m),ant_ht(m),wave_hs(m),wave_dp(deg),max_data_vol,min_data_vol,range_data_vol,max_prob,min_prob,range_prob\n")
+    for dist in dist_range:
+        for ant_ht in ant_ht_range:
+            for wave_hs in wave_hs_range:
+                for wave_dp in wave_dp_range:
+                    file_name = "/comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
+                    file = str(dir_comms) + file_name
+                    print(file)
+                    df = pd.read_csv(str(file))
+                    max_data_vol = df["data_transferred(sec)"].max()
+                    min_data_vol = df["data_transferred(sec)"].min()
+                    range_data_vol = max_data_vol - min_data_vol
+                    max_prob = df["good_transmissions_probability"].max()
+                    min_prob = df["good_transmissions_probability"].min()
+                    range_prob = max_prob - min_prob
+                    f.write("{dist},{ant_ht},{wave_hs},{wave_dp},{max_data},{min_data},{range_data},{max_prob},{min_prob},{range_prob}\n".format(
+                        dist=dist,
+                        ant_ht=ant_ht,
+                        wave_hs=wave_hs,
+                        wave_dp=wave_dp,
+                        max_data=max_data_vol, 
+                        min_data=min_data_vol, 
+                        range_data=range_data_vol,
+                        max_prob=max_prob,
+                        min_prob=min_prob,
+                        range_prob=range_prob))
+    # Analyse the comms simulations
     df = pd.read_csv(file_path)
-
-    df = df[df["range"] != 0]
-    ax = sns.violinplot(data=df["range"])
-    ax.set(ylabel="Range")
-    plt.xticks(fontsize=8) # set the new x-axis labels
-    plt.yticks(fontsize=8) # set the new y-axis label size
-    plt.savefig(dir_fig.joinpath("range_violin.png"), dpi=200)
-    
+    # Changing the transmission period may not be effective when:
+    # (1) The wave height it significantly smaller than the ant ht,
+    # (2) The wave height is significantly higher than the ant ht.
+    df["hs/ant_ht"] = df["wave_hs(m)"]/df["ant_ht(m)"]
+    bins = pd.IntervalIndex.from_tuples([(0, 0.5), (0.5, 1), (1, 2), (2, 3), (3,4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9)])
+    df["bins"] = pd.cut(df["hs/ant_ht"], bins)
+    # Plot the effects of hs on data transfer.
     plt.clf()
-    
-    ax = sns.boxplot(data=df["range"], showfliers=False)
-    ax.set(ylabel="Range")
-    plt.xticks(fontsize=8) # set the new x-axis labels
-    plt.yticks(fontsize=8) # set the new y-axis label size
-    plt.savefig(dir_fig.joinpath("range_box.png"), dpi=200)
+    df["avg_data_vol"] = (df["max_data_vol"] + df["min_data_vol"])/2.0
+    ax = sns.boxplot(data=df, x="bins", y="avg_data_vol", showfliers=False)
+    ax.set(xlabel="wave ht / antenna ht", ylabel="data volume (sec)")
+    plt.xticks(fontsize=7) # set the new x-axis labels
+    plt.yticks(fontsize=7) # set the new y-axis label size
+    file_fig = dir_fig.joinpath("comms_hs_effect_data_vol.png")
+    plt.savefig(file_fig, dpi=200)
+    report.write_image(file_fig)
+    # Plot the effects of hs on changing the probability of comms
+    plt.clf()
+    ax = sns.boxplot(data=df, x="bins", y="range_prob", showfliers=False)
+    ax.set(xlabel="wave ht / antenna ht", ylabel="max prob - min prob")
+    plt.xticks(fontsize=7) # set the new x-axis labels
+    plt.yticks(fontsize=7) # set the new y-axis label size
+    file_fig = dir_fig.joinpath("comms_hs_effect_prob.png")
+    plt.savefig(file_fig, dpi=200)
+    report.write_image(file_fig)
+    # Plot the effects of hs on changing the vol of data transmitted.
+    plt.clf()
+    ax = sns.boxplot(data=df, x="bins", y="range_data_vol", showfliers=False)
+    ax.set(xlabel="wave ht / antenna ht", ylabel="max data vol - min data vol (sec)")
+    plt.xticks(fontsize=7) # set the new x-axis labels
+    plt.yticks(fontsize=7) # set the new y-axis label size
+    file_fig = dir_fig.joinpath("comms_hs_effect_data_vol_change.png")
+    plt.savefig(file_fig, dpi=200)
+    report.write_image(file_fig)
         
 
 def generate_report(report):
@@ -394,8 +433,8 @@ def generate_report(report):
     # report_hs_effect_on_communication(report)
     # report_wave_dp_effect_on_communication(report)
     # report_dist_by_wave_len_effect_on_communication(report)
-    run_comms()
-    report_comms_quality()
+    # run_comms()
+    report_comms_quality(report)
 
 
 report = Report(dir_report.joinpath("report.md"))
