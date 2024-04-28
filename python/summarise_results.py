@@ -34,6 +34,7 @@ ant_ht_range = np.arange(1, 6, 1) # m
 wave_hs_range = np.arange(1.0, 10.0, 1.0) # m
 wave_dp_range = np.arange(0, 91, 30) # deg   
 rand_seed_range = range(10, 20, 1)
+comms_header_size = 0.1 # sec
 
 def summarise_1():
     f = open(dir_report.joinpath("summary_1.csv"), "w")
@@ -267,79 +268,67 @@ def report_dist_by_wave_len_effect_on_communication(report):
 
 
 def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
-    # Increase the transmission and quiet period in multiples of the simulation time step (40 ms) 
-    # to ensure each time step remains consistently in either transmission or quiet mode.
     simulation_time_step = 40 # milli sec
     num_sim_time_steps_per_trans_period = 25
     cycle_increment = simulation_time_step/1000 * num_sim_time_steps_per_trans_period # 1 sec
-    fresnel_min_required_clearence = 60.0
+    fresnel_min_required_clearence = 60.0 # %
     results = []
-    for transmission_period in np.arange(cycle_increment, 10.0, cycle_increment):
-        for quiet_period in np.arange(cycle_increment, 10.0, cycle_increment):
-            for rand_seed in rand_seed_range:
-                file_name = "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
-                file_path = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
-                df = pd.read_csv(file_path)
-                total_period = transmission_period + quiet_period
-                duty_cycle = transmission_period/total_period
-                is_comm_quality_good = True
-                count_sim_time_steps_per_trans_period = 0
-                is_current_cycle_transmission = True 
-                transmission_cycle_counter = 0
-                good_transmission_cycle_counter = 0
-                for index, row in df.iterrows():
-                    clearence = row["clearence(%)"]
-                    if count_sim_time_steps_per_trans_period == num_sim_time_steps_per_trans_period:
-                        if is_current_cycle_transmission:
-                            transmission_cycle_counter += 1
-                            good_transmission_cycle_counter += 1 if is_comm_quality_good else 0
-                        # reset the counters and flags
-                        count_sim_time_steps_per_trans_period = 0
-                        is_comm_quality_good = True
-                        # toggle transmission/quiet cycle
-                        is_current_cycle_transmission = not(is_current_cycle_transmission)
-                    if is_current_cycle_transmission:
-                        is_comm_quality_good = is_comm_quality_good and (clearence >= fresnel_min_required_clearence)
-                        count_sim_time_steps_per_trans_period += 1 
-                    else:
-                        count_sim_time_steps_per_trans_period += 1 
-                # Record stats
-                result = {"dist":dist,
-                        "ant_ht":ant_ht,
-                        "hs":wave_hs,
-                        "wave_dp":wave_dp,
-                        "seed":rand_seed,
-                        "trans_period":transmission_period,
-                        "quiet_period":quiet_period,
-                        "duty_cycle":duty_cycle,
-                        "total_trans":transmission_cycle_counter,
-                        "good_trans":good_transmission_cycle_counter,
-                        "good_trans_prob":good_transmission_cycle_counter/transmission_cycle_counter
-                        }
-                results.append(result)
+    for transmission_period in np.arange(cycle_increment, 11.0, cycle_increment):
+        for rand_seed in rand_seed_range:
+            file_name = "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+            file_path = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+            df = pd.read_csv(file_path)
+            is_comm_quality_good = True
+            count_sim_time_steps_in_current_trans_period = 0
+            total_sim_time_steps_in_current_trans_period = transmission_period * 1000/ simulation_time_step
+            transmission_cycle_counter = 0
+            good_transmission_cycle_counter = 0
+            for index, row in df.iterrows():
+                clearence = row["clearence(%)"]
+                if count_sim_time_steps_in_current_trans_period == total_sim_time_steps_in_current_trans_period:
+                    transmission_cycle_counter += 1
+                    good_transmission_cycle_counter += 1 if is_comm_quality_good else 0
+                    # reset the counters and flags
+                    count_sim_time_steps_in_current_trans_period = 0
+                    is_comm_quality_good = True
+                is_comm_quality_good = is_comm_quality_good and (clearence >= fresnel_min_required_clearence)
+                count_sim_time_steps_in_current_trans_period += 1 
+            # Record stats
+            data_transferred = good_transmission_cycle_counter*transmission_period - good_transmission_cycle_counter*comms_header_size
+            result = {"dist":dist,
+                    "ant_ht":ant_ht,
+                    "hs":wave_hs,
+                    "wave_dp":wave_dp,
+                    "seed":rand_seed,
+                    "trans_period":transmission_period,
+                    "total_trans":transmission_cycle_counter,
+                    "good_trans":good_transmission_cycle_counter,
+                    "good_trans_prob":good_transmission_cycle_counter/transmission_cycle_counter,
+                    "data_transferred":data_transferred
+                    }
+            results.append(result)
     # Write result to file
     file_name = "/comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
     file_path = str(dir_comms) + file_name
     f = open(file_path, "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,transmission_period(sec),quiet_period(sec),duty_cycle,total_transmission,good_transmissions,good_transmissions_probability\n")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,transmission_period(sec),total_transmission,good_transmissions,good_transmissions_probability,data_transferred(sec)\n")
     for result in results:
-        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{trans_period},{quiet_period},{duty_cycle},{total_trans},{good_trans},{good_trans_prob:0.2f}\n".format(
+        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{trans_period},{total_trans},{good_trans},{good_trans_prob:0.2f},{data_transferred:0.2f}\n".format(
                 dist=result["dist"],
                 ant_ht=result["ant_ht"],
                 hs=result["hs"],
                 wave_dp=result["wave_dp"],
                 seed=result["seed"],
                 trans_period=result["trans_period"],
-                quiet_period=result["quiet_period"],
-                duty_cycle=result["duty_cycle"],
                 total_trans=result["total_trans"],
                 good_trans=result["good_trans"],
-                good_trans_prob=result["good_trans_prob"]
+                good_trans_prob=result["good_trans_prob"],
+                data_transferred=result["data_transferred"]
                 ))  
     f.close()
 
 
-def report_communication_quality():
+def run_comms():
     jobs = []
     # Create jobs
     for dist in dist_range:
@@ -369,13 +358,44 @@ def report_communication_quality():
             jobs[i].join()
         jobs_start_index = jobs_end_index
 
+def report_comms_quality():
+    file_name = "/summary_comms.csv"
+    file_path = str(dir_report) + file_name
+    f = open(file_path, "w")
+    f.write("max_prob,min_prob,range\n")
+    for file in dir_comms.iterdir():
+        print(file)
+        df = pd.read_csv(str(file))
+        max_prob = df["good_transmissions_probability"].max()
+        min_prob = df["good_transmissions_probability"].min()
+        range = max_prob - min_prob
+        f.write("{max},{min},{range}\n".format(max=max_prob, min=min_prob, range=range))
+    # Box plot
+    df = pd.read_csv(file_path)
+
+    df = df[df["range"] != 0]
+    ax = sns.violinplot(data=df["range"])
+    ax.set(ylabel="Range")
+    plt.xticks(fontsize=8) # set the new x-axis labels
+    plt.yticks(fontsize=8) # set the new y-axis label size
+    plt.savefig(dir_fig.joinpath("range_violin.png"), dpi=200)
+    
+    plt.clf()
+    
+    ax = sns.boxplot(data=df["range"], showfliers=False)
+    ax.set(ylabel="Range")
+    plt.xticks(fontsize=8) # set the new x-axis labels
+    plt.yticks(fontsize=8) # set the new y-axis label size
+    plt.savefig(dir_fig.joinpath("range_box.png"), dpi=200)
+        
 
 def generate_report(report):
     # report_coeff_variation(report)    
     # report_hs_effect_on_communication(report)
     # report_wave_dp_effect_on_communication(report)
     # report_dist_by_wave_len_effect_on_communication(report)
-    report_communication_quality()
+    run_comms()
+    report_comms_quality()
 
 
 report = Report(dir_report.joinpath("report.md"))
@@ -383,7 +403,3 @@ report = Report(dir_report.joinpath("report.md"))
 # summarise_2()
 generate_report(report)
 
-
-# open files                          (-n) 1024
-# ulimit -Sn 10000
-# 
