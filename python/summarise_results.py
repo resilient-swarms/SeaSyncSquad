@@ -34,7 +34,8 @@ ant_ht_range = np.arange(1, 6, 1) # m
 wave_hs_range = np.arange(1.0, 10.0, 1.0) # m
 wave_dp_range = np.arange(0, 91, 30) # deg   
 rand_seed_range = range(10, 20, 1)
-comms_header_size = 0.1 # sec
+message_length_range = np.arange(1, 11, 1)
+message_header_length = 0.1 # sec
 
 def summarise_1():
     f = open(dir_report.joinpath("summary_1.csv"), "w")
@@ -269,41 +270,39 @@ def report_dist_by_wave_len_effect_on_communication(report):
 
 def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     simulation_time_step = 40 # milli sec
-    num_sim_time_steps_per_trans_period = 25
-    cycle_increment = simulation_time_step/1000 * num_sim_time_steps_per_trans_period # 1 sec
     fresnel_min_required_clearence = 60.0 # %
     results = []
-    for transmission_period in np.arange(cycle_increment, 11.0, cycle_increment):
+    for message_length in message_length_range:
         for rand_seed in rand_seed_range:
             file_name = "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
             file_path = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
             df = pd.read_csv(file_path)
             is_comm_quality_good = True
-            count_sim_time_steps_in_current_trans_period = 0
-            total_sim_time_steps_in_current_trans_period = transmission_period * 1000/ simulation_time_step
-            transmission_cycle_counter = 0
-            good_transmission_cycle_counter = 0
+            count_sim_time_steps_in_current_message = 0
+            total_sim_time_steps_per_message = message_length * 1000/ simulation_time_step
+            count_messages_transmitted = 0
+            count_uninterrupted_messages = 0
             for index, row in df.iterrows():
                 clearence = row["clearence(%)"]
-                if count_sim_time_steps_in_current_trans_period == total_sim_time_steps_in_current_trans_period:
-                    transmission_cycle_counter += 1
-                    good_transmission_cycle_counter += 1 if is_comm_quality_good else 0
+                if count_sim_time_steps_in_current_message == total_sim_time_steps_per_message:
+                    count_messages_transmitted += 1
+                    count_uninterrupted_messages += 1 if is_comm_quality_good else 0
                     # reset the counters and flags
-                    count_sim_time_steps_in_current_trans_period = 0
+                    count_sim_time_steps_in_current_message = 0
                     is_comm_quality_good = True
                 is_comm_quality_good = is_comm_quality_good and (clearence >= fresnel_min_required_clearence)
-                count_sim_time_steps_in_current_trans_period += 1 
+                count_sim_time_steps_in_current_message += 1 
             # Record stats
-            data_transferred = good_transmission_cycle_counter*transmission_period - good_transmission_cycle_counter*comms_header_size
+            data_transferred = (message_length - message_header_length) * count_uninterrupted_messages
             result = {"dist":dist,
                     "ant_ht":ant_ht,
                     "hs":wave_hs,
                     "wave_dp":wave_dp,
                     "seed":rand_seed,
-                    "trans_period":transmission_period,
-                    "total_trans":transmission_cycle_counter,
-                    "good_trans":good_transmission_cycle_counter,
-                    "good_trans_prob":good_transmission_cycle_counter/transmission_cycle_counter,
+                    "message_length":message_length,
+                    "total_messages":count_messages_transmitted,
+                    "uninterrupted_messages":count_uninterrupted_messages,
+                    "uninterrupted_msg_prob":count_uninterrupted_messages/count_messages_transmitted,
                     "data_transferred":data_transferred
                     }
             results.append(result)
@@ -311,18 +310,19 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     file_name = "/comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
     file_path = str(dir_comms) + file_name
     f = open(file_path, "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,transmission_period(sec),total_transmission,good_transmissions,good_transmissions_probability,data_transferred(sec)\n")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,message_length(sec),header_length(sec),total_messages,uninterrupted_messages,uninterrupted_message_probability,data_transferred(sec)\n")
     for result in results:
-        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{trans_period},{total_trans},{good_trans},{good_trans_prob:0.2f},{data_transferred:0.2f}\n".format(
+        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{message_length},{header_length},{total_messages},{uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{data_transferred:0.2f}\n".format(
                 dist=result["dist"],
                 ant_ht=result["ant_ht"],
                 hs=result["hs"],
                 wave_dp=result["wave_dp"],
                 seed=result["seed"],
-                trans_period=result["trans_period"],
-                total_trans=result["total_trans"],
-                good_trans=result["good_trans"],
-                good_trans_prob=result["good_trans_prob"],
+                message_length=result["message_length"],
+                header_length=message_header_length,
+                total_messages=result["total_messages"],
+                uninterrupted_messages=result["uninterrupted_messages"],
+                uninterrupted_msg_prob=result["uninterrupted_msg_prob"],
                 data_transferred=result["data_transferred"]
                 ))  
     f.close()
@@ -377,7 +377,7 @@ def report_comms_quality(report):
     df["bins"] = pd.cut(df["hs/ant_ht"], bins)
     # Plot the effects of hs on data transfer.
     plt.clf()
-    ax = sns.boxplot(data=df, x="bins", y="data_transferred(sec)", hue="transmission_period(sec)", showfliers=False)
+    ax = sns.boxplot(data=df, x="bins", y="data_transferred(sec)", hue="message_length(sec)", showfliers=False)
     ax.set(xlabel="wave ht / antenna ht", ylabel="data volume (sec)")
     plt.xticks(fontsize=7) # set the new x-axis labels
     plt.yticks(fontsize=7) # set the new y-axis label size
@@ -386,7 +386,7 @@ def report_comms_quality(report):
     report.write_image(file_fig)
     # Plot the effects of hs on data transfer for a given ant_ht.
     plt.clf()
-    ax = sns.boxplot(data=df.loc[df["ant_ht(m)"] == 2.0], x="hs(m)", y="data_transferred(sec)", hue="transmission_period(sec)", showfliers=False)
+    ax = sns.boxplot(data=df.loc[df["ant_ht(m)"] == 2.0], x="hs(m)", y="data_transferred(sec)", hue="message_length(sec)", showfliers=False)
     ax.set(xlabel="wave height (m)", ylabel="data volume (sec)")
     plt.xticks(fontsize=7) # set the new x-axis labels
     plt.yticks(fontsize=7) # set the new y-axis label size
@@ -395,7 +395,7 @@ def report_comms_quality(report):
     report.write_image(file_fig)
     # Plot the effects of hs on data transfer for a given ant_ht and dist between ants.
     plt.clf()
-    ax = sns.boxplot(data=df.loc[(df["ant_ht(m)"] == 2.0) &  (df["dist(m)"] == 200)], x="hs(m)", y="data_transferred(sec)", hue="transmission_period(sec)")
+    ax = sns.boxplot(data=df.loc[(df["ant_ht(m)"] == 2.0) &  (df["dist(m)"] == 200)], x="hs(m)", y="data_transferred(sec)", hue="message_length(sec)")
     ax.set(xlabel="wave height (m)", ylabel="data volume (sec)")
     plt.xticks(fontsize=7) # set the new x-axis labels
     plt.yticks(fontsize=7) # set the new y-axis label size
@@ -404,7 +404,7 @@ def report_comms_quality(report):
     report.write_image(file_fig)
     # Plot the effects of hs on data transfer for a given ant_ht and dist between ants.
     plt.clf()
-    ax = sns.boxplot(data=df.loc[(df["ant_ht(m)"] == 3.0) &  (df["dist(m)"] == 200)], x="hs(m)", y="data_transferred(sec)", hue="transmission_period(sec)")
+    ax = sns.boxplot(data=df.loc[(df["ant_ht(m)"] == 3.0) &  (df["dist(m)"] == 200)], x="hs(m)", y="data_transferred(sec)", hue="message_length(sec)")
     ax.set(xlabel="wave height (m)", ylabel="data volume (sec)")
     plt.xticks(fontsize=7) # set the new x-axis labels
     plt.yticks(fontsize=7) # set the new y-axis label size
@@ -427,7 +427,7 @@ def generate_report(report):
     # report_hs_effect_on_communication(report)
     # report_wave_dp_effect_on_communication(report)
     # report_dist_by_wave_len_effect_on_communication(report)
-    # run_comms()
+    run_comms()
     report_comms_quality(report)
 
 
