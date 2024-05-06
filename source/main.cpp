@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -45,13 +46,13 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
     simulation.run();
 }
 
-int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
+int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set, std::string dir_simulation_logs)
 {
     // Lambda function to run the simulation in threads
     auto run_in_thread = [&](double distance, double antenna_height, double wave_hs, double wave_dp, int wave_rand_seed)
     {
         std::ofstream fout;
-        std::string file_name = "../results/log_";
+        std::string file_name = dir_simulation_logs + "/log_";
         file_name += std::to_string((int)distance) + "_" +
                      std::to_string((int)antenna_height) + "_" +
                      std::to_string((int)wave_hs) + "_" +
@@ -99,7 +100,7 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
     {
         for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height+=1.0)
         {
-            for(double wave_hs = 1.0; wave_hs <= 9.0; wave_hs+=1.0)
+            for(double wave_hs = 1.0; wave_hs <= 18.0; wave_hs+=1.0)
             {
                 for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp+=PI/6.0)
                 {
@@ -145,8 +146,23 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 }
 
 
-int main()
+int main(int argc, char * argv[]) // only one argument expected, and assuming it is the path to the results directory. 
 {
+
+    std::string dir_results = argv[1];
+    std::string dir_simulation_logs = dir_results + "/simulation_logs";
+
+    // Create the results directory if it doesn' exist
+    if(!std::filesystem::exists(dir_results)) 
+    {
+        std::filesystem::create_directory(dir_results);
+    }
+    // Create a directory for simulation logs
+    if(!std::filesystem::exists(dir_simulation_logs)) 
+    {
+        std::filesystem::create_directory(dir_simulation_logs);
+    }
+
     // ASV spec
     struct Asv_specification asv_spec {
         2.1 , // L_wl (m)
@@ -162,5 +178,5 @@ int main()
     };
     bool is_surge_sway_halt_set = true;
 
-    run_headless(asv_spec, is_surge_sway_halt_set);
+    run_headless(asv_spec, is_surge_sway_halt_set, dir_simulation_logs);
 }
