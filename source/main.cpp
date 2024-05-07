@@ -96,7 +96,7 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     std::vector<double> wave_hss;
     std::vector<double> wave_dps;
     std::vector<int> wave_rand_seeds;
-    for(double distance = 100; distance <= 600; distance+=10)
+    for(double distance = 125; distance <= 600; distance+=50)
     {
         for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height+=1.0)
         {
@@ -118,31 +118,37 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     }
 
     // Spawn the threads and run simulations.
-    int count_total_threads = std::thread::hardware_concurrency();
-    std::cout<<"Hardware concurrency = "<<count_total_threads<<"\n";
+    int max_pool_size = std::thread::hardware_concurrency();
+    std::cout<<"Hardware concurrency = "<<max_pool_size<<"\n";
+    int jobs_start_index = 0;
+    int jobs_end_index = 0;
     int count_total_simulations = distances.size();
-    int count_remaining_simulations = count_total_simulations;
-    int i = 0;
-    while(i < count_total_simulations)
+    while(jobs_end_index < count_total_simulations)
     {
-        std::vector<std::thread*> threads;
-        for(int j = 0; j < std::min(count_total_threads, count_remaining_simulations); ++j, ++i, --count_remaining_simulations)
+        std::cout<<"\n";
+        int count_jobs_remaining = count_total_simulations - jobs_end_index;
+        jobs_end_index = jobs_start_index + std::min(max_pool_size, count_jobs_remaining);
+        std::vector<std::thread*> thread_pool;
+        // Spawn threads
+        for(int i = jobs_start_index; i < jobs_end_index; ++i)
         {
+            std::cout<<"["<<i<<" / "<<count_total_simulations<<"]";
             std::cout<<"Distance = "<<distances[i]<<", antenna height = "<<antenna_heights[i]<<", hs = "<<wave_hss[i]<<", dp = "<<wave_dps[i]*180/PI<<", rand seed = "<<wave_rand_seeds[i]<<"\n";
             std::thread* thread_object = new std::thread(run_in_thread, distances[i], antenna_heights[i], wave_hss[i], wave_dps[i], wave_rand_seeds[i]);
-            threads.push_back(thread_object);
+            thread_pool.push_back(thread_object);
         }
-        for(auto thread : threads)
+        // Join the threads
+        for(auto thread : thread_pool)
         {
             thread->join();
         }
-        for(auto thread : threads)
+        // Free memory
+        for(auto thread : thread_pool)
         {
             delete thread;
         } 
-        threads.clear();
-        std::cout<<"\n";
-    } 
+        thread_pool.clear();
+    }
 }
 
 
