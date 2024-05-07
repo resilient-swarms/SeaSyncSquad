@@ -9,6 +9,8 @@ import multiprocessing
 module_dir = pathlib.Path(__file__).parent.resolve()
 root_dir = module_dir.parent
 dir_results = root_dir.joinpath("results")
+dir_sim_log = dir_results.joinpath("simulation_logs")
+dir_sim_log.mkdir(parents=True, exist_ok=True)
 dir_report = dir_results.joinpath("report")
 dir_report.mkdir(parents=True, exist_ok=True)
 dir_comms = dir_results.joinpath("comms")
@@ -29,11 +31,11 @@ class Report:
     def write_image(self, image_path):
         self.f.write("![text1]({})\n".format(image_path))
 
-dist_range = np.arange(100.0, 601.0, 10.0) # m
+dist_range = np.arange(100.0, 601.0, 25.0) # m
 ant_ht_range = np.arange(1, 6, 1) # m
-wave_hs_range = np.arange(1.0, 10.0, 1.0) # m
+wave_hs_range = np.arange(1.0, 19.0, 1.0) # m
 wave_dp_range = np.arange(0, 91, 30) # deg   
-rand_seed_range = range(10, 20, 1)
+rand_seed_range = range(1, 6, 1)
 message_length_range = np.arange(1, 11, 1)
 message_header_length = 0.1 # sec
 
@@ -45,7 +47,7 @@ def summarise_1():
             for wave_hs in wave_hs_range:
                 for wave_dp in wave_dp_range:
                     for rand_seed in rand_seed_range:
-                        file_name = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+                        file_name = str(dir_sim_log) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
                         print("Summarising - ", file_name)
                         df = pd.read_csv(file_name)
                         # Calculate the communication window patterns
@@ -275,8 +277,9 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     for message_length in message_length_range:
         for rand_seed in rand_seed_range:
             file_name = "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
-            file_path = str(dir_results) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+            file_path = str(dir_sim_log) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
             df = pd.read_csv(file_path)
+            peak_wave_len = df["peak_wave_len(m)"].unique()[0]
             is_comm_quality_good = True
             count_sim_time_steps_in_current_message = 0
             total_sim_time_steps_per_message = message_length * 1000/ simulation_time_step
@@ -299,6 +302,7 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
                     "hs":wave_hs,
                     "wave_dp":wave_dp,
                     "seed":rand_seed,
+                    "peak_wave_len":peak_wave_len,
                     "message_length":message_length,
                     "total_messages":count_messages_transmitted,
                     "uninterrupted_messages":count_uninterrupted_messages,
@@ -310,14 +314,15 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     file_name = "/comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
     file_path = str(dir_comms) + file_name
     f = open(file_path, "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,message_length(sec),header_length(sec),total_messages,uninterrupted_messages,uninterrupted_message_probability,data_transferred(sec)\n")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,peak_wave_len(m),message_length(sec),header_length(sec),total_messages,uninterrupted_messages,uninterrupted_message_probability,data_transferred(sec)\n")
     for result in results:
-        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{message_length},{header_length},{total_messages},{uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{data_transferred:0.2f}\n".format(
+        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{peak_wave_len},{message_length},{header_length},{total_messages},{uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{data_transferred:0.2f}\n".format(
                 dist=result["dist"],
                 ant_ht=result["ant_ht"],
                 hs=result["hs"],
                 wave_dp=result["wave_dp"],
                 seed=result["seed"],
+                peak_wave_len=result["peak_wave_len"],
                 message_length=result["message_length"],
                 header_length=message_header_length,
                 total_messages=result["total_messages"],
@@ -428,7 +433,7 @@ def generate_report(report):
     # report_wave_dp_effect_on_communication(report)
     # report_dist_by_wave_len_effect_on_communication(report)
     run_comms()
-    report_comms_quality(report)
+    # report_comms_quality(report)
 
 
 report = Report(dir_report.joinpath("report.md"))
