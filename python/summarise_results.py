@@ -354,7 +354,7 @@ def run_comms():
         process_pool = []
         # Spawn threads
         for i in range(jobs_start_index, jobs_end_index):
-            print("proceccsing job {}".format(i))
+            print("proceccsing job {} / {}".format(i, len(jobs)))
             process_pool.append(jobs[i])
             jobs[i].start()
         # Join threads
