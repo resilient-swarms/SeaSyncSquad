@@ -132,8 +132,8 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
         // Spawn threads
         for(int i = jobs_start_index; i < jobs_end_index; ++i)
         {
-            std::cout<<"["<<i<<" / "<<count_total_simulations<<"]";
-            std::cout<<"Distance = "<<distances[i]<<", antenna height = "<<antenna_heights[i]<<", hs = "<<wave_hss[i]<<", dp = "<<wave_dps[i]*180/PI<<", rand seed = "<<wave_rand_seeds[i]<<"\n";
+            std::cout<<"["<<i<<" / "<<count_total_simulations<<"]\t";
+            std::cout<<"Distance = "<<distances[i]<<" antenna height = "<<antenna_heights[i]<<"  hs = "<<wave_hss[i]<<" dp = "<<wave_dps[i]*180/PI<<" rand seed = "<<wave_rand_seeds[i]<<"\n";
             std::thread* thread_object = new std::thread(run_in_thread, distances[i], antenna_heights[i], wave_hss[i], wave_dps[i], wave_rand_seeds[i]);
             thread_pool.push_back(thread_object);
         }
