@@ -102,13 +102,13 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     std::vector<double> ant_wave_relative_angles;
     std::vector<int> wave_rand_seeds;
     
-    for(double distance = 100; distance <= 600; distance+=50)
+    for(double distance = 100; distance <= 1000; distance += 100)
     {
-        for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height+=1.0)
+        for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height += 1.0)
         {
-            for(double wave_hs = 1.0; wave_hs <= 18.0; wave_hs+=1.0)
+            for(double wave_hs = 1.0; wave_hs <= 13.0; wave_hs += 1.0)
             {
-                for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp+=PI/6.0)
+                for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp += (wave_dp < PI/3.0)? PI/6.0 : PI/18.0)
                 {
                     double ant_wave_relative_angle;   
                     int wave_rand_seed;
