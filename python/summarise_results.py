@@ -31,10 +31,11 @@ class Report:
     def write_image(self, image_path):
         self.f.write("![text1]({})\n".format(image_path))
 
-dist_range = np.arange(100.0, 601.0, 25.0) # m
+dist_range = np.arange(100.0, 601.0, 50.0) # m
 ant_ht_range = np.arange(1, 6, 1) # m
 wave_hs_range = np.arange(1.0, 19.0, 1.0) # m
 wave_dp_range = np.arange(0, 91, 30) # deg   
+ant_wave_relative_angle_range = np.arange(0, 91, 30) # deg   
 rand_seed_range = range(1, 6, 1)
 message_length_range = np.arange(1, 11, 1)
 message_header_length = 0.1 # sec
@@ -275,11 +276,13 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     fresnel_min_required_clearence = 60.0 # %
     results = []
     for message_length in message_length_range:
-        for rand_seed in rand_seed_range:
-            file_name = "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
-            file_path = str(dir_sim_log) + "/log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
-            df = pd.read_csv(file_path)
+        for ant_wave_relative_angle, rand_seed in zip(ant_wave_relative_angle_range, rand_seed_range):
+            file_name = "log_{}_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), round(ant_wave_relative_angle), rand_seed)
+            file_path = dir_sim_log.joinpath(file_name) 
+            df = pd.read_csv(str(file_path))
             peak_wave_len = df["peak_wave_len(m)"].unique()[0]
+            wave_dp_sim = round(df["wave_dp(rad)"].unique()[0] * 180/math.pi)
+            ant_wave_relative_angle_sim = round(df["ant_align(rad)"].unique()[0] * 180/math.pi) - wave_dp_sim
             is_comm_quality_good = True
             count_sim_time_steps_in_current_message = 0
             total_sim_time_steps_per_message = message_length * 1000/ simulation_time_step
@@ -300,7 +303,10 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
             result = {"dist":dist,
                     "ant_ht":ant_ht,
                     "hs":wave_hs,
-                    "wave_dp":wave_dp,
+                    "wave_dp_input":wave_dp,
+                    "wave_dp_sim":wave_dp_sim,
+                    "ant_wave_relative_angle_input":ant_wave_relative_angle,
+                    "ant_wave_relative_angle_sim":ant_wave_relative_angle_sim,
                     "seed":rand_seed,
                     "peak_wave_len":peak_wave_len,
                     "message_length":message_length,
@@ -311,16 +317,19 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
                     }
             results.append(result)
     # Write result to file
-    file_name = "/comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
-    file_path = str(dir_comms) + file_name
-    f = open(file_path, "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp(deg),seed,peak_wave_len(m),message_length(sec),header_length(sec),total_messages,uninterrupted_messages,uninterrupted_message_probability,data_transferred(sec)\n")
+    file_name = "comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
+    file_path = dir_comms.joinpath(file_name)
+    f = open(str(file_path), "w")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp_input(deg),wave_dp_sim(deg),ant_wave_relative_angle_input(deg),ant_wave_relative_angle_sim(deg),seed,peak_wave_len(m),message_length(sec),header_length(sec),total_messages,uninterrupted_messages,uninterrupted_message_probability,data_transferred(sec)\n")
     for result in results:
-        f.write("{dist},{ant_ht},{hs},{wave_dp},{seed},{peak_wave_len},{message_length},{header_length},{total_messages},{uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{data_transferred:0.2f}\n".format(
+        f.write("{dist},{ant_ht},{hs},{wave_dp_input},{wave_dp_sim},{ant_wave_relative_angle_input},{ant_wave_relative_angle_sim},{seed},{peak_wave_len},{message_length},{header_length},{total_messages},{uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{data_transferred:0.2f}\n".format(
                 dist=result["dist"],
                 ant_ht=result["ant_ht"],
                 hs=result["hs"],
-                wave_dp=result["wave_dp"],
+                wave_dp_input=result["wave_dp_input"],
+                wave_dp_sim=result["wave_dp_sim"],
+                ant_wave_relative_angle_input=result["ant_wave_relative_angle_input"],
+                ant_wave_relative_angle_sim=result["ant_wave_relative_angle_sim"],
                 seed=result["seed"],
                 peak_wave_len=result["peak_wave_len"],
                 message_length=result["message_length"],
@@ -354,7 +363,7 @@ def run_comms():
         process_pool = []
         # Spawn threads
         for i in range(jobs_start_index, jobs_end_index):
-            print("proceccsing job {} / {}".format(i, len(jobs)))
+            print("processing job {} / {}".format(i, len(jobs)))
             process_pool.append(jobs[i])
             jobs[i].start()
         # Join threads
@@ -433,7 +442,7 @@ def generate_report(report):
     # report_wave_dp_effect_on_communication(report)
     # report_dist_by_wave_len_effect_on_communication(report)
     run_comms()
-    # report_comms_quality(report)
+    report_comms_quality(report)
 
 
 report = Report(dir_report.joinpath("report.md"))
