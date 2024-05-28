@@ -263,6 +263,9 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
         double distance = sqrt((asv1_position.keys.x - asv2_position.keys.x)*(asv1_position.keys.x - asv2_position.keys.x) +  
                                (asv1_position.keys.y - asv2_position.keys.y)*(asv1_position.keys.y - asv2_position.keys.y));
 
+        // Antenna alignment angle w.r.t North
+        double antennas_alignment_to_north =  atan2(asv2_position.keys.x - asv1_position.keys.x, asv2_position.keys.y - asv1_position.keys.y);
+
         // Peak wave length
         int wave_count = sea_surface_get_count_component_waves(this->sea);
         const struct Regular_wave* peak_wave = sea_surface_get_regular_wave_at(this->sea, (wave_count-1)/2);
@@ -307,6 +310,7 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
              << this->antenna_height << "," 
              << sig_wave_height << "," 
              << wave_dp << "," 
+             << antennas_alignment_to_north << "," 
              << peak_wave_length << ","
              << seed << "," 
              << time << "," 
