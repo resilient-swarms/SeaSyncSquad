@@ -95,8 +95,8 @@ void Simulate_LOS::create_fresnel_zone(double radio_wave_frequency, std::vector<
 void Simulate_LOS::run()
 {
     std::vector<double> times; // vector to store all time steps. Used for plotting. 
-    std::vector<double> fresnel_clearenceses; // Fresnel zone clearence for all time steps
-    std::vector<double> fresnel_clearence_min_limit; // Min required clearence of Fresnel zone = 60%
+    std::vector<double> fresnel_clearanceses; // Fresnel zone clearance for all time steps
+    std::vector<double> fresnel_clearance_min_limit; // Min required clearance of Fresnel zone = 60%
 
     for(int t = 0; ;++t)
     {
@@ -140,7 +140,7 @@ void Simulate_LOS::run()
         plt::subplot(2, 1, 1);
         plt::named_plot("Ocean surface", x_sea, y_sea, "cornflowerblue");
         // Plot Fresnel zone
-        double min_clearence_current_timestep = 100.0;
+        double min_clearance_current_timestep = 100.0;
         bool legend_inserted_once = false;
         for(int i = 0; i < sea_points.size(); ++i)
         {
@@ -165,7 +165,7 @@ void Simulate_LOS::run()
                 y_ellipse_section_blocked.push_back(y1);
                 y_ellipse_section_blocked.push_back(y2);
                 plt::plot(x_ellipse_section, y_ellipse_section_blocked, "r");
-                min_clearence_current_timestep = 0.0;
+                min_clearance_current_timestep = 0.0;
             }
             else
             {
@@ -184,10 +184,10 @@ void Simulate_LOS::run()
                     plt::plot(x_ellipse_section, y_ellipse_section_clear, "g");
                     plt::plot(x_ellipse_section, y_ellipse_section_blocked, "r");
                 }
-                double clearence = (y2-y0)/(y2-y1)*100;
-                if(min_clearence_current_timestep > clearence)
+                double clearance = (y2-y0)/(y2-y1)*100;
+                if(min_clearance_current_timestep > clearance)
                 {
-                    min_clearence_current_timestep = clearence;
+                    min_clearance_current_timestep = clearance;
                 }
             }
         }
@@ -219,13 +219,13 @@ void Simulate_LOS::run()
         plt::axis("equal");
 
         times.push_back(time);
-        fresnel_clearenceses.push_back(min_clearence_current_timestep);
-        fresnel_clearence_min_limit.push_back(60.0);
+        fresnel_clearanceses.push_back(min_clearance_current_timestep);
+        fresnel_clearance_min_limit.push_back(60.0);
 
         // Plot the Fresnel zone obstruction
         plt::subplot(2, 1, 2);
-        plt::named_plot("Fresnel zone clearance", times, fresnel_clearenceses, "grey");
-        plt::named_plot("Minimum required Fresnel zone clearance", times, fresnel_clearence_min_limit, "r--");
+        plt::named_plot("Fresnel zone clearance", times, fresnel_clearanceses, "grey");
+        plt::named_plot("Minimum required Fresnel zone clearance", times, fresnel_clearance_min_limit, "r--");
         plt::title("Fresnel Zone Cleareance");
         plt::xlabel("Time (sec)");
         plt::ylabel("Fresnel zone clearance (%)");
@@ -266,12 +266,10 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
         // Antenna alignment angle w.r.t North
         double antennas_alignment_to_north =  atan2(asv2_position.keys.x - asv1_position.keys.x, asv2_position.keys.y - asv1_position.keys.y);
 
-        // Peak wave length
-        int wave_count = sea_surface_get_count_component_waves(this->sea);
-        const struct Regular_wave* peak_wave = sea_surface_get_regular_wave_at(this->sea, (wave_count-1)/2);
-        double peak_wave_length = regular_wave_get_length(peak_wave);
+        // Peak freq
+        double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
 
-        // Create eqidistant points 
+        // Create equidistant points 
         std::vector<union Coordinates_3D> sea_points;
         std::vector<double> offsets;
         create_equidistant_points(asv1_position, asv2_position, time,  sea_points, offsets);
@@ -281,8 +279,8 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
         double radio_frequency = 2.4 * 1000000000; // Hz
         create_fresnel_zone(radio_frequency, sea_points, ellipse_z);
 
-        // Calculate clearence
-        double min_clearence_current_timestep = 100.0;
+        // Calculate clearance
+        double min_clearance_current_timestep = 100.0;
         for(int i = 0; i < sea_points.size(); ++i)
         {
             double y1 = ellipse_z[i][0];
@@ -294,14 +292,14 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
             }
             else if(y0 > y2)
             {
-                min_clearence_current_timestep = 0.0;
+                min_clearance_current_timestep = 0.0;
             }
             else
             {
-                double clearence = (y2-y0)/(y2-y1)*100;
-                if(min_clearence_current_timestep > clearence)
+                double clearance = (y2-y0)/(y2-y1)*100;
+                if(min_clearance_current_timestep > clearance)
                 {
-                    min_clearence_current_timestep = clearence;
+                    min_clearance_current_timestep = clearance;
                 }
             }
         }
@@ -311,9 +309,9 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
              << sig_wave_height << "," 
              << wave_dp << "," 
              << antennas_alignment_to_north << "," 
-             << peak_wave_length << ","
+             << peak_freq << ","
              << seed << "," 
              << time << "," 
-             << min_clearence_current_timestep << "\n";
+             << min_clearance_current_timestep << "\n";
     }
 }

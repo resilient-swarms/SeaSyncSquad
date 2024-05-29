@@ -49,7 +49,7 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set, std::string dir_simulation_logs)
 {
     // Lambda function to run the simulation in threads
-    auto run_in_thread = [&](double distance, double antenna_height, double wave_hs, double wave_dp, double ant_wave_relative_angle, int wave_rand_seed)
+    auto run_in_thread = [&](double distance, double antenna_height, double wave_hs, double wave_dp, int wave_rand_seed)
     {
         std::ofstream fout;
         std::string file_name = dir_simulation_logs + "/log_";
@@ -57,10 +57,9 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
                      std::to_string((int)antenna_height) + "_" +
                      std::to_string((int)wave_hs) + "_" +
                      std::to_string((int)round(wave_dp*180.0/PI)) + "_" +
-                     std::to_string((int)round(ant_wave_relative_angle*180.0/PI)) + "_" +
                      std::to_string(wave_rand_seed) + "_.csv";
         fout.open(file_name);
-        fout << "dist(m),ant_ht(m),hs(m),wave_dp(rad),ant_align(rad),peak_wave_len(m),seed,time(sec),clearence(%)\n";
+        fout << "dist(m),ant_ht(m),hs(m),wave_dp(rad),ant_align(rad),peak_freq(hz),seed,time(sec),clearance(%)\n";
 
         // Init sea surface
         int count_component_waves = 21; 
@@ -75,9 +74,8 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
         asv_set_surge_sway_halt(asv1, is_surge_sway_halt_set);
 
         // Init ASV-2
-        double ants_alignment_with_north = wave_dp + ant_wave_relative_angle;
-        double x2 = x1 + distance * sin(ants_alignment_with_north);
-        double y2 = y1 + distance * cos(ants_alignment_with_north);
+        double x2 = x1 + distance;
+        double y2 = y1;
         union Coordinates_3D position2 {x2, y2, 0.0}; // {m, m, m}
         union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
         struct Asv* asv2 = asv_new(asv_spec, sea, position2, attitude2);
@@ -99,7 +97,6 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     std::vector<double> antenna_heights;
     std::vector<double> wave_hss;
     std::vector<double> wave_dps;
-    std::vector<double> ant_wave_relative_angles;
     std::vector<int> wave_rand_seeds;
     
     for(double distance = 100; distance <= 1000; distance += 100)
@@ -110,17 +107,12 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
             {
                 for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp += (wave_dp < PI/3.0)? PI/6.0 : PI/18.0)
                 {
-                    double ant_wave_relative_angle;   
-                    int wave_rand_seed;
-                    for(ant_wave_relative_angle = 0, wave_rand_seed = 1; 
-                        ant_wave_relative_angle <= PI/2; 
-                        ant_wave_relative_angle += PI/6.0, wave_rand_seed++)
+                    for(int wave_rand_seed = 1; wave_rand_seed <= 3; ++wave_rand_seed)
                     {
                         distances.push_back(distance);
                         antenna_heights.push_back(antenna_height);
                         wave_hss.push_back(wave_hs);
                         wave_dps.push_back(wave_dp);
-                        ant_wave_relative_angles.push_back(ant_wave_relative_angle);
                         wave_rand_seeds.push_back(wave_rand_seed);
                     }
                 }
@@ -144,13 +136,12 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
         for(int i = jobs_start_index; i < jobs_end_index; ++i)
         {
             std::cout<<"["<<i<<" / "<<count_total_simulations<<"]\t";
-            std::cout<<" Distance = "<<distances[i]<<" antenna height = "<<antenna_heights[i]<<"  hs = "<<wave_hss[i]<<" dp = "<<wave_dps[i]*180/PI<<" Ant alignment = "<<ant_wave_relative_angles[i]*180/PI<<" rand seed = "<<wave_rand_seeds[i]<<"\n";
+            std::cout<<" Distance = "<<distances[i]<<" antenna height = "<<antenna_heights[i]<<"  hs = "<<wave_hss[i]<<" dp = "<<wave_dps[i]*180/PI<<" rand seed = "<<wave_rand_seeds[i]<<"\n";
             std::thread* thread_object = new std::thread(run_in_thread, 
                                                         distances[i], 
                                                         antenna_heights[i], 
                                                         wave_hss[i], 
                                                         wave_dps[i],
-                                                        ant_wave_relative_angles[i],
                                                         wave_rand_seeds[i]);
             thread_pool.push_back(thread_object);
         }
