@@ -21,7 +21,7 @@ dir_fig.mkdir(parents=True, exist_ok=True)
 dist_range            = range(100, 1001, 100) # m
 ant_ht_range          = range(1, 6, 1) # m
 wave_hs_range         = range(1, 14, 1) # m
-wave_dp_range         = list(range(0, 60, 30)) + list(range(60, 91, 10)) # deg   
+wave_dp_range         = range(0, 91, 10) # deg   
 rand_seed_range       = range(1, 4, 1)
 message_length_range  = range(1, 11, 1)
 message_header_length = 0.1 # sec

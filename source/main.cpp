@@ -74,8 +74,8 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
         asv_set_surge_sway_halt(asv1, is_surge_sway_halt_set);
 
         // Init ASV-2
-        double x2 = x1 + distance;
-        double y2 = y1;
+        double x2 = x1;
+        double y2 = y1 + distance;
         union Coordinates_3D position2 {x2, y2, 0.0}; // {m, m, m}
         union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
         struct Asv* asv2 = asv_new(asv_spec, sea, position2, attitude2);
@@ -105,7 +105,7 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
         {
             for(double wave_hs = 1.0; wave_hs <= 13.0; wave_hs += 1.0)
             {
-                for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp += (wave_dp < PI/3.0)? PI/6.0 : PI/18.0)
+                for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp += PI/18.0)
                 {
                     for(int wave_rand_seed = 1; wave_rand_seed <= 3; ++wave_rand_seed)
                     {
@@ -128,9 +128,10 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     int count_total_simulations = distances.size();
     while(jobs_end_index < count_total_simulations)
     {
-        std::cout<<"\n";
+        std::cout<<"jobs start index = "<<jobs_start_index<<" jobs end index = "<<jobs_end_index<<"\n";
         int count_jobs_remaining = count_total_simulations - jobs_end_index;
         jobs_end_index = jobs_start_index + std::min(max_pool_size, count_jobs_remaining);
+        std::cout<<"jobs start index = "<<jobs_start_index<<" jobs end index = "<<jobs_end_index<<"\n";
         std::vector<std::thread*> thread_pool;
         // Spawn threads
         for(int i = jobs_start_index; i < jobs_end_index; ++i)
