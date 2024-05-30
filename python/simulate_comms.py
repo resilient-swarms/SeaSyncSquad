@@ -11,8 +11,6 @@ root_dir = module_dir.parent
 dir_results = root_dir.joinpath("results")
 dir_sim_log = dir_results.joinpath("simulation_logs")
 dir_sim_log.mkdir(parents=True, exist_ok=True)
-dir_report = dir_results.joinpath("report")
-dir_report.mkdir(parents=True, exist_ok=True)
 dir_comms = dir_results.joinpath("comms")
 dir_comms.mkdir(parents=True, exist_ok=True)
 dir_fig = dir_results.joinpath("fig")
@@ -25,6 +23,7 @@ wave_dp_range         = range(0, 91, 10) # deg
 rand_seed_range       = range(1, 4, 1)
 message_length_range  = range(1, 11, 1)
 message_header_length = 0.1 # sec
+total_simulation_time = 15 * 60 #sec
 
 def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     simulation_time_step = 40 # milli sec
@@ -41,20 +40,20 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
             is_comm_quality_good = True
             count_sim_time_steps_in_current_message = 0
             total_sim_time_steps_per_message = message_length * 1000/ simulation_time_step
-            count_messages_transmitted = 0
-            count_uninterrupted_messages = 0
+            num_messages = 0
+            num_uninterrupted_messages = 0
             for index, row in df.iterrows():
                 clearance = row["clearance(%)"]
                 if count_sim_time_steps_in_current_message == total_sim_time_steps_per_message:
-                    count_messages_transmitted += 1
-                    count_uninterrupted_messages += 1 if is_comm_quality_good else 0
+                    num_messages += 1
+                    num_uninterrupted_messages += 1 if is_comm_quality_good else 0
                     # reset the counters and flags
                     count_sim_time_steps_in_current_message = 0
                     is_comm_quality_good = True
                 is_comm_quality_good = is_comm_quality_good and (clearance >= fresnel_min_required_clearance)
                 count_sim_time_steps_in_current_message += 1 
             # Record stats
-            data_transferred = (message_length - message_header_length) * count_uninterrupted_messages
+            uninterrupted_time = ((message_length - message_header_length) * num_uninterrupted_messages) / total_simulation_time * 100 # %
             result = {"dist":dist,
                     "ant_ht":ant_ht,
                     "hs":wave_hs,
@@ -64,19 +63,19 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
                     "peak_freq":peak_freq,
                     "peak_wave_len":peak_wave_len,
                     "message_length":message_length,
-                    "total_messages":count_messages_transmitted,
-                    "uninterrupted_messages":count_uninterrupted_messages,
-                    "uninterrupted_msg_prob":count_uninterrupted_messages/count_messages_transmitted,
-                    "data_transferred":data_transferred
+                    "num_messages":num_messages,
+                    "num_uninterrupted_messages":num_uninterrupted_messages,
+                    "uninterrupted_msg_prob":num_uninterrupted_messages/num_messages,
+                    "uninterrupted_time":uninterrupted_time
                     }
             results.append(result)
     # Write result to file
     file_name = "comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
     file_path = dir_comms.joinpath(file_name)
     f = open(str(file_path), "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp_input(deg),wave_dp_sim(deg),seed,peak_freq(hz),peak_wave_len(m),message_length(sec),header_length(sec),total_messages,uninterrupted_messages,uninterrupted_message_probability,data_transferred(sec)\n")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp_input(deg),wave_dp_sim(deg),seed,peak_freq(hz),peak_wave_len(m),message_length(sec),header_length(sec),num_messages,num_uninterrupted_messages,uninterrupted_message_probability,uninterrupted_time(%)\n")
     for result in results:
-        f.write("{dist},{ant_ht},{hs},{wave_dp_input},{wave_dp_sim},{seed},{peak_freq},{peak_wave_len},{message_length},{header_length},{total_messages},{uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{data_transferred:0.2f}\n".format(
+        f.write("{dist},{ant_ht},{hs},{wave_dp_input},{wave_dp_sim},{seed},{peak_freq},{peak_wave_len},{message_length},{header_length},{num_messages},{num_uninterrupted_messages},{uninterrupted_msg_prob:0.2f},{uninterrupted_time:0.2f}\n".format(
                 dist=result["dist"],
                 ant_ht=result["ant_ht"],
                 hs=result["hs"],
@@ -87,10 +86,10 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
                 peak_wave_len=result["peak_wave_len"],
                 message_length=result["message_length"],
                 header_length=message_header_length,
-                total_messages=result["total_messages"],
-                uninterrupted_messages=result["uninterrupted_messages"],
+                num_messages=result["num_messages"],
+                num_uninterrupted_messages=result["num_uninterrupted_messages"],
                 uninterrupted_msg_prob=result["uninterrupted_msg_prob"],
-                data_transferred=result["data_transferred"]
+                uninterrupted_time=result["uninterrupted_time"]
                 ))  
     f.close()
 
