@@ -16,16 +16,16 @@ dir_comms.mkdir(parents=True, exist_ok=True)
 dir_fig = dir_results.joinpath("fig")
 dir_fig.mkdir(parents=True, exist_ok=True)
 
-dist_range            = range(100, 1001, 100) # m
+dist_range            = range(500, 5001, 500) # m
 ant_ht_range          = range(1, 6, 1) # m
-wave_hs_range         = range(1, 14, 1) # m
-wave_dp_range         = range(0, 91, 10) # deg   
+wave_hs_range         = range(1, 10, 2) # m
+wave_dp_range         = range(0, 91, 30) # deg   
 rand_seed_range       = range(1, 4, 1)
 message_length_range  = range(1, 11, 1)
 message_header_length = 0.1 # sec
 total_simulation_time = 15 * 60 #sec
 
-def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
+def evaluate_communication_quality_fresnel_zones(dist, ant_ht, wave_hs, wave_dp):
     simulation_time_step = 40 # milli sec
     fresnel_min_required_clearance = 60.0 # %
     results = []
@@ -94,7 +94,59 @@ def evaluate_communication_quality(dist, ant_ht, wave_hs, wave_dp):
     f.close()
 
 
-def simulate_comms():
+def evaluate_communication_quality_diffraction_and_path_loss(dist, ant_ht, wave_hs, wave_dp):
+    results = []
+    for rand_seed in rand_seed_range:
+        file_name = "log_{}_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp), rand_seed)
+        file_path = dir_sim_log.joinpath(file_name) 
+        df = pd.read_csv(str(file_path))
+        peak_freq = df["peak_freq(hz)"].unique()[0]
+        peak_wave_len = 9.81/(2 * math.pi * peak_freq**2) # m
+        wave_dp_sim = round(df["wave_dp(rad)"].unique()[0] * 180/math.pi)
+        path_loss = df["path_loss(dB)"].mean()
+        mean_total_loss = df["total_loss(dB)"].mean()
+        max_total_loss = df["total_loss(dB)"].max()
+        mean_diffraction_loss = mean_total_loss - path_loss
+        max_diffraction_loss = max_total_loss - path_loss
+        # Record stats
+        result = {"dist":dist,
+                "ant_ht":ant_ht,
+                "hs":wave_hs,
+                "wave_dp_input":wave_dp,
+                "wave_dp_sim":wave_dp_sim,
+                "seed":rand_seed,
+                "peak_freq":peak_freq,
+                "peak_wave_len":peak_wave_len,
+                "path_loss":path_loss,
+                "mean_diffraction_loss":mean_diffraction_loss,
+                "max_diffraction_loss":max_diffraction_loss,
+                "mean_total_loss":mean_total_loss
+                }
+        results.append(result)
+    # Write result to file
+    file_name = "comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
+    file_path = dir_comms.joinpath(file_name)
+    f = open(str(file_path), "w")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp_input(deg),wave_dp_sim(deg),seed,peak_freq(hz),peak_wave_len(m),path_loss(dB),mean_diffraction_loss(dB),max_diffraction_loss(dB),mean_total_loss(dB)\n")
+    for result in results:
+        f.write("{dist},{ant_ht},{hs},{wave_dp_input},{wave_dp_sim},{seed},{peak_freq},{peak_wave_len},{path_loss},{mean_diffraction_loss},{max_diffraction_loss},{mean_total_loss}\n".format(
+                dist=result["dist"],
+                ant_ht=result["ant_ht"],
+                hs=result["hs"],
+                wave_dp_input=result["wave_dp_input"],
+                wave_dp_sim=result["wave_dp_sim"],
+                seed=result["seed"],
+                peak_freq=result["peak_freq"],
+                peak_wave_len=result["peak_wave_len"],
+                path_loss=result["path_loss"],
+                mean_diffraction_loss=result["mean_diffraction_loss"],
+                max_diffraction_loss=result["max_diffraction_loss"],
+                mean_total_loss=result["mean_total_loss"],
+                ))  
+    f.close()
+
+
+def simulate_comms(method):
     jobs = []
     # Create jobs
     for dist in dist_range:
@@ -102,8 +154,13 @@ def simulate_comms():
             for wave_hs in wave_hs_range:
                 for wave_dp in wave_dp_range:
                     # Create all jobs
-                    p = multiprocessing.Process(target=evaluate_communication_quality, args=(dist, ant_ht, wave_hs, wave_dp))
+                    p = None
+                    if method == "fresnel_zones":
+                        p = multiprocessing.Process(target=evaluate_communication_quality_fresnel_zones, args=(dist, ant_ht, wave_hs, wave_dp))
+                    if method == "diffraction_and_path_loss":
+                        p = multiprocessing.Process(target=evaluate_communication_quality_diffraction_and_path_loss, args=(dist, ant_ht, wave_hs, wave_dp))
                     jobs.append(p)
+
     # Process jobs
     max_pool_size = multiprocessing.cpu_count()
     jobs_start_index = 0
@@ -126,4 +183,5 @@ def simulate_comms():
        
 
 # Simulate comms
-simulate_comms()
+method = "diffraction_and_path_loss"
+simulate_comms(method)
