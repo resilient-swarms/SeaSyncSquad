@@ -120,16 +120,17 @@ def evaluate_communication_quality_diffraction_and_path_loss(dist, ant_ht, wave_
                 "path_loss":path_loss,
                 "mean_diffraction_loss":mean_diffraction_loss,
                 "max_diffraction_loss":max_diffraction_loss,
-                "mean_total_loss":mean_total_loss
+                "mean_total_loss":mean_total_loss,
+                "max_total_loss":max_total_loss
                 }
         results.append(result)
     # Write result to file
     file_name = "comms_{}_{}_{}_{}_.csv".format(int(dist), int(ant_ht), int(wave_hs), round(wave_dp))
     file_path = dir_comms.joinpath(file_name)
     f = open(str(file_path), "w")
-    f.write("dist(m),ant_ht(m),hs(m),wave_dp_input(deg),wave_dp_sim(deg),seed,peak_freq(hz),peak_wave_len(m),path_loss(dB),mean_diffraction_loss(dB),max_diffraction_loss(dB),mean_total_loss(dB)\n")
+    f.write("dist(m),ant_ht(m),hs(m),wave_dp_input(deg),wave_dp_sim(deg),seed,peak_freq(hz),peak_wave_len(m),path_loss(dB),mean_diffraction_loss(dB),max_diffraction_loss(dB),mean_total_loss(dB),max_total_loss(dB)\n")
     for result in results:
-        f.write("{dist},{ant_ht},{hs},{wave_dp_input},{wave_dp_sim},{seed},{peak_freq},{peak_wave_len},{path_loss},{mean_diffraction_loss},{max_diffraction_loss},{mean_total_loss}\n".format(
+        f.write("{dist},{ant_ht},{hs},{wave_dp_input},{wave_dp_sim},{seed},{peak_freq},{peak_wave_len},{path_loss},{mean_diffraction_loss},{max_diffraction_loss},{mean_total_loss},{max_total_loss}\n".format(
                 dist=result["dist"],
                 ant_ht=result["ant_ht"],
                 hs=result["hs"],
@@ -142,6 +143,7 @@ def evaluate_communication_quality_diffraction_and_path_loss(dist, ant_ht, wave_
                 mean_diffraction_loss=result["mean_diffraction_loss"],
                 max_diffraction_loss=result["max_diffraction_loss"],
                 mean_total_loss=result["mean_total_loss"],
+                max_total_loss=result["max_total_loss"]
                 ))  
     f.close()
 
