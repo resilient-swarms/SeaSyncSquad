@@ -4,6 +4,8 @@
 #include "simulate_LOS.h"
 
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 
 namespace plt = matplotlibcpp;
 
@@ -15,6 +17,7 @@ Simulate_LOS::Simulate_LOS(Sea_surface* sea, Asv* asv1, Asv* asv2, double antenn
     this->asv2 = asv2;
     this->antenna_height = antenna_height;
     this->time_step_size = 40.0; // milli-sec
+    this->radio_frequency = 2.4; // GHz
 }
 
 
@@ -24,7 +27,12 @@ void Simulate_LOS::create_equidistant_points(const union Coordinates_3D& p1,
                                              std::vector<union Coordinates_3D>& points, 
                                              std::vector<double>& offsets)
 {
-    double d = 1.0; // offset distance along the line (m)
+    // Calculate the offsets along the line (m)
+    // Lets set the offset as (peak wave length)/10.
+    double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
+    double peak_wave_length = G/(2.0 * PI * peak_freq*peak_freq);
+    double d = peak_wave_length/10.0; // offset distance along the line (m)
+
     double sigma_d = 0.0; // cumulative offsets along the line (m)
     double total_d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + 
                           (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y)); // distance between p1 and p2 (m)
@@ -92,7 +100,7 @@ void Simulate_LOS::create_fresnel_zone(double radio_wave_frequency, std::vector<
 }
 
 
-void Simulate_LOS::run()
+void Simulate_LOS::run_fresnel_zones()
 {
     std::vector<double> times; // vector to store all time steps. Used for plotting. 
     std::vector<double> fresnel_clearanceses; // Fresnel zone clearance for all time steps
@@ -124,7 +132,7 @@ void Simulate_LOS::run()
 
         // Create the Fresnel zone
         std::vector<std::array<double, 2>> ellipse_z;
-        double radio_frequency = 2.4 * 1000000000; // Hz
+        double radio_frequency = this->radio_frequency * 1000000000; // Hz
         create_fresnel_zone(radio_frequency, sea_points, ellipse_z);
         
         // Plot
@@ -209,7 +217,7 @@ void Simulate_LOS::run()
         double sig_wave_height = sea_surface_get_significant_height(this->sea);
         plt::text(30.0, -10.0, "Significant wave height = "+std::to_string(sig_wave_height)+" m");
         plt::text(60.0, -10.0, "Antenna height = "+std::to_string(antenna_height)+" m");
-        plt::text(90.0, -10.0, "Radio freq = "+std::to_string(radio_frequency/1000000000)+" GHz");
+        plt::text(90.0, -10.0, "Radio freq = "+std::to_string(this->radio_frequency)+" GHz");
         double max_fresnel_radius = ellipse_z[int(ellipse_z.size()/2)][1] - ellipse_z[int(ellipse_z.size()/2)][0];
         plt::text(0.0, 10.0, "Max Fresnel zone radius = "+std::to_string(max_fresnel_radius)+" m");
         plt::title("Ocean Waves Blocking Fresnel Zone");
@@ -237,14 +245,13 @@ void Simulate_LOS::run()
 }
 
 
-void Simulate_LOS::run_headless(std::ofstream& fout)
+void Simulate_LOS::run_headless_fresnel_zones(std::ofstream& fout, double total_simulation_time)
 {
     double sig_wave_height = sea_surface_get_significant_height(this->sea);
     double wave_dp = sea_surface_get_predominant_heading(this->sea);
     int seed = sea_surface_get_rand_seed(this->sea);    
 
-    double simulation_length = 15.0 * 60.0; // sec
-    for(double time = 0; time < simulation_length; time+=this->time_step_size/1000.0)
+    for(double time = 0; time < total_simulation_time; time+=this->time_step_size/1000.0)
     {
         // We will use a fixed rudder angle for both ASVs
         double rudder_angle = PI/4; // rad
@@ -313,5 +320,112 @@ void Simulate_LOS::run_headless(std::ofstream& fout)
              << seed << "," 
              << time << "," 
              << min_clearance_current_timestep << "\n";
+    }
+}
+
+double Simulate_LOS::get_diffraction_loss(const union Coordinates_3D& p1, const union Coordinates_3D& p2, double time)
+{
+    // Reference:
+    // Title - Multiple knife-edge diffraction of microwaves 
+    // Link  - https://ieeexplore.ieee.org/document/1138719
+    
+    // Create equidistant points 
+    std::vector<union Coordinates_3D> sea_points;
+    std::vector<double> offsets;
+    create_equidistant_points(p1, p2, time,  sea_points, offsets);
+
+    // Find the highest point
+    std::vector<double> heights;
+    std::vector<double> d1s;
+    std::vector<double> d2s;
+    for(int i = 0; i < sea_points.size(); ++i)
+    {
+        union Coordinates_3D p = sea_points[i];
+        // Calculate the Z for LOS at the location of the current point
+        double d_total = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + 
+                              (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y));
+        double d_point = sqrt((p.keys.x - p1.keys.x)*(p.keys.x - p1.keys.x) + 
+                              (p.keys.y - p1.keys.y)*(p.keys.y - p1.keys.y));
+        double z = p1.keys.z + (p2.keys.z - p1.keys.z) * d_point/d_total;
+        // Calculate the height of the current point above LOS
+        double height = p.keys.z - z;
+        heights.push_back(height);
+        d1s.push_back(d_point);
+        d2s.push_back(d_total - d_point);
+    }
+
+    // Find the index of the highest point
+    int i = std::distance(heights.begin(), std::max_element(heights.begin(), heights.end()));
+
+    // Calculate diffraction loss
+    double d1 = d1s[i] / 1000.0; // Km
+    double d2 = d2s[i] / 1000.0; // Km
+    double h = heights[i];
+    double f = this->radio_frequency * 1000.0; // MHz
+    double r = 548 * sqrt((d1*d2)/(f*(d1+d2)));
+    double a_m1 = (h > r && d1 != 0.0 && d2 != 0.0)? (20.0 * std::log10(h/r)) + 16 : 0.0; // dB
+    double a_m2 = (h > r && d1 != 0.0 && d2 != 0.0)? get_diffraction_loss(sea_points[i], p2, time) : 0.0;// dB
+    double a_m = a_m1 + a_m2; // dB
+
+    return a_m;
+}
+
+void Simulate_LOS::run_headless_diffraction_and_path_loss(std::ofstream& fout, double total_simulation_time)
+{
+    double sig_wave_height = sea_surface_get_significant_height(this->sea);
+    double wave_dp = sea_surface_get_predominant_heading(this->sea);
+    int seed = sea_surface_get_rand_seed(this->sea);    
+
+    for(double time = 0; time < total_simulation_time; time+=this->time_step_size/1000.0)
+    {
+        // We will use a fixed rudder angle for both ASVs
+        double rudder_angle = PI/4; // rad
+
+        // Update ASV dynamics
+        wave_glider_compute_dynamics(this->asv1, rudder_angle, this->time_step_size);
+        wave_glider_compute_dynamics(this->asv2, rudder_angle, this->time_step_size);
+
+        // Get position and attitude of the ASVs
+        union Coordinates_3D asv1_position = asv_get_position_origin(this->asv1);
+        union Coordinates_3D asv2_position = asv_get_position_origin(this->asv2);
+        union Coordinates_3D asv1_attitude = asv_get_attitude(this->asv1);
+        union Coordinates_3D asv2_attitude = asv_get_attitude(this->asv2);
+
+        // Distance between antennas
+        double distance = sqrt((asv1_position.keys.x - asv2_position.keys.x)*(asv1_position.keys.x - asv2_position.keys.x) +  
+                               (asv1_position.keys.y - asv2_position.keys.y)*(asv1_position.keys.y - asv2_position.keys.y));
+
+        // Antenna alignment angle w.r.t North
+        double antennas_alignment_to_north =  atan2(asv2_position.keys.x - asv1_position.keys.x, asv2_position.keys.y - asv1_position.keys.y);
+
+        // Peak freq
+        double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
+
+        // Compute path loss
+        double f = this->radio_frequency * 1000.0; // MHz
+        double d = sqrt((asv2_position.keys.x - asv1_position.keys.x)*(asv2_position.keys.x - asv1_position.keys.x) + 
+                        (asv2_position.keys.y - asv1_position.keys.y)*(asv2_position.keys.y - asv1_position.keys.y));
+        double a_0 = 32.5 + 20.0*std::log10(f) + 20.0*std::log10(d); // dB 
+
+        // Compute diffraction loss
+        union Coordinates_3D antenna_1{asv1_position.keys.x, asv1_position.keys.y, asv1_position.keys.z + this->antenna_height};
+        union Coordinates_3D antenna_2{asv2_position.keys.x, asv2_position.keys.y, asv2_position.keys.z + this->antenna_height};
+        double a_m =  get_diffraction_loss(antenna_1, antenna_2, time);
+
+        // Total loss
+        double a = a_0 + a_m;
+        
+        // Write to file
+        fout << distance << "," 
+             << this->antenna_height << "," 
+             << sig_wave_height << "," 
+             << wave_dp << "," 
+             << antennas_alignment_to_north << "," 
+             << peak_freq << ","
+             << seed << "," 
+             << time << "," 
+             << a_0 << ","
+             << a_m << ","
+             << a << "\n";
     }
 }

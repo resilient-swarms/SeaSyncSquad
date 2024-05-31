@@ -43,10 +43,10 @@ int run(struct Asv_specification asv_spec, bool is_surge_sway_halt_set)
 
     // Initialise and run the simulation
     Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
-    simulation.run();
+    simulation.run_fresnel_zones();
 }
 
-int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set, std::string dir_simulation_logs)
+int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set, std::string dir_simulation_logs, std::string method)
 {
     // Lambda function to run the simulation in threads
     auto run_in_thread = [&](double distance, double antenna_height, double wave_hs, double wave_dp, int wave_rand_seed)
@@ -59,7 +59,14 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
                      std::to_string((int)round(wave_dp*180.0/PI)) + "_" +
                      std::to_string(wave_rand_seed) + "_.csv";
         fout.open(file_name);
-        fout << "dist(m),ant_ht(m),hs(m),wave_dp(rad),ant_align(rad),peak_freq(hz),seed,time(sec),clearance(%)\n";
+        if(method == "fresnel_zones")
+        {
+            fout << "dist(m),ant_ht(m),hs(m),wave_dp(rad),ant_align(rad),peak_freq(hz),seed,time(sec),clearance(%)\n";
+        }
+        if(method == "diffraction_and_path_loss")
+        {
+            fout << "dist(m),ant_ht(m),hs(m),wave_dp(rad),ant_align(rad),peak_freq(hz),seed,time(sec),path_loss(dB),diffraction_loss(dB),total_loss(dB)\n";
+        }
 
         // Init sea surface
         int count_component_waves = 21; 
@@ -82,8 +89,16 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
         asv_set_surge_sway_halt(asv2, is_surge_sway_halt_set);
 
         // Init and run simulation
+        double total_simulation_time = 15.0 * 60.0; // sec
         Simulate_LOS simulation = Simulate_LOS(sea, asv1, asv2, antenna_height);
-        simulation.run_headless(fout);
+        if(method == "fresnel_zones")
+        {
+            simulation.run_headless_fresnel_zones(fout, total_simulation_time);
+        }
+        if(method == "diffraction_and_path_loss")
+        {
+            simulation.run_headless_diffraction_and_path_loss(fout, total_simulation_time);
+        }
 
         // Clear memory
         sea_surface_delete(sea);
@@ -99,13 +114,13 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     std::vector<double> wave_dps;
     std::vector<int> wave_rand_seeds;
     
-    for(double distance = 100; distance <= 1000; distance += 100)
+    for(double distance = 500; distance <= 5000; distance += 500)
     {
         for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height += 1.0)
         {
-            for(double wave_hs = 1.0; wave_hs <= 13.0; wave_hs += 1.0)
+            for(double wave_hs = 1.0; wave_hs <= 9.0; wave_hs += 2.0)
             {
-                for(double wave_dp = 0.0; wave_dp <= PI/2; wave_dp += PI/18.0)
+                for(double wave_dp = 0.0; wave_dp <= PI/2.0; wave_dp += PI/6.0)
                 {
                     for(int wave_rand_seed = 1; wave_rand_seed <= 3; ++wave_rand_seed)
                     {
@@ -194,5 +209,6 @@ int main(int argc, char * argv[]) // only one argument expected, and assuming it
     };
     bool is_surge_sway_halt_set = true;
 
-    run_headless(asv_spec, is_surge_sway_halt_set, dir_simulation_logs);
+    std::string method = "diffraction_and_path_loss";
+    run_headless(asv_spec, is_surge_sway_halt_set, dir_simulation_logs, method);
 }
