@@ -27,11 +27,12 @@ void Simulate_LOS::create_equidistant_points(const union Coordinates_3D& p1,
                                              std::vector<union Coordinates_3D>& points, 
                                              std::vector<double>& offsets)
 {
-    // Calculate the offsets along the line (m)
-    // Lets set the offset as (peak wave length)/10.
-    double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
-    double peak_wave_length = G/(2.0 * PI * peak_freq*peak_freq);
-    double d = peak_wave_length/10.0; // offset distance along the line (m)
+    // // Calculate the offsets along the line (m)
+    // // Lets set the offset as (peak wave length)/10.
+    // double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
+    // double peak_wave_length = G/(2.0 * PI * peak_freq*peak_freq);
+    // double d = peak_wave_length/10.0; // offset distance along the line (m)
+    double d = 1.0; // offset distance along the line (m)
 
     double sigma_d = 0.0; // cumulative offsets along the line (m)
     double total_d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + 

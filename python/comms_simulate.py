@@ -16,7 +16,7 @@ dir_comms.mkdir(parents=True, exist_ok=True)
 dir_fig = dir_results.joinpath("fig")
 dir_fig.mkdir(parents=True, exist_ok=True)
 
-dist_range            = range(500, 5001, 500) # m
+dist_range            = range(200, 1001, 200) # m
 ant_ht_range          = range(1, 6, 1) # m
 wave_hs_range         = range(1, 10, 2) # m
 wave_dp_range         = range(0, 91, 30) # deg   

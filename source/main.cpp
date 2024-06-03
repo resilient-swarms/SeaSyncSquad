@@ -114,7 +114,7 @@ int run_headless(struct Asv_specification asv_spec, bool is_surge_sway_halt_set,
     std::vector<double> wave_dps;
     std::vector<int> wave_rand_seeds;
     
-    for(double distance = 500; distance <= 5000; distance += 500)
+    for(double distance = 200; distance <= 1000; distance += 200)
     {
         for(double antenna_height = 1.0; antenna_height <= 5.0; antenna_height += 1.0)
         {
