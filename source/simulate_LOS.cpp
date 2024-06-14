@@ -326,56 +326,80 @@ void Simulate_LOS::run_headless_fresnel_zones(std::ofstream& fout, double total_
 
 double Simulate_LOS::get_diffraction_loss(const union Coordinates_3D& p1, const union Coordinates_3D& p2, double time)
 {
-    // Reference:
-    // Title - Multiple knife-edge diffraction of microwaves 
-    // Link  - https://ieeexplore.ieee.org/document/1138719
+    // Ref: ITU-R P.526-15 Section 4.5 and 4.1
+
+    double R = 6378.0; // Radius of earth in Km
+    double Ce = 1/R; // Curvature of earth in Km^-1
+    double C = 299'792'458.0; // speed of light in m/s
+    double f = this->radio_frequency * 1'000'000'000; // Hz
+    double lambda = C/f; // wavelength in m
+    double h_ts = p1.keys.z + this->antenna_height; // height of transmitter in m.
+    double h_rs = p2.keys.z + this->antenna_height; // height of receiver in m.
+    double d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y)) / 1000.0; // Total distance between p1 and p2 in Km
+    double S_tr = (h_rs - h_ts)/d; // Slope of line from transmitter to receiver in m/Km
     
     // Create equidistant points 
     std::vector<union Coordinates_3D> sea_points;
     std::vector<double> offsets;
     create_equidistant_points(p1, p2, time,  sea_points, offsets);
 
-    // Find the highest point
-    std::vector<double> heights;
-    std::vector<double> d1s;
-    std::vector<double> d2s;
-    for(int i = 0; i < sea_points.size(); ++i)
+    std::vector<double> heights; // heights of each intermediate profile point, in m, above LoS
+    std::vector<double> d1s;     // distance of each intermediate profile point from transmitter in Km
+    std::vector<double> d2s;     // distance of each intermediate profile point to receiver in Km
+    std::vector<double> Sts;     // Slopes of each intermediate profile point to transmitter in m/Km
+    std::vector<double> Srs;     // Slopes of each intermediate profile point to receiver in m/Km
+    std::vector<double> nus;     // diffraction parameters nu
+    int n_intermediate_profile_points = sea_points.size() - 1;
+    for(int i = 1; i < n_intermediate_profile_points; ++i)
     {
         union Coordinates_3D p = sea_points[i];
         // Calculate the Z for LOS at the location of the current point
-        double d_total = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + 
-                              (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y));
-        double d_point = sqrt((p.keys.x - p1.keys.x)*(p.keys.x - p1.keys.x) + 
-                              (p.keys.y - p1.keys.y)*(p.keys.y - p1.keys.y));
-        double z = p1.keys.z + (p2.keys.z - p1.keys.z) * d_point/d_total;
+        double d1 = sqrt((p.keys.x - p1.keys.x)*(p.keys.x - p1.keys.x) + 
+                         (p.keys.y - p1.keys.y)*(p.keys.y - p1.keys.y)) / 1000.0; // Km
+        double d2 = d - d1; // Km
+        double z_los = h_ts + (h_ts - h_rs)/d * d1; // height of LoS in m
         // Calculate the height of the current point above LOS
-        double height = p.keys.z - z; // Height is positive for points above LoS else negative. 
-        heights.push_back(height);
-        d1s.push_back(d_point);
-        d2s.push_back(d_total - d_point);
+        double h = p.keys.z - z_los; // Height is positive for points above LoS else negative. 
+        double St = (h + 500*Ce*d1*d2 - h_ts)/d1; // m/Km
+        double Sr = (h + 500*Ce*d1*d2 - h_rs)/d2; // m/Km
+        double nu = (h + 500*Ce*d1*d2 - (h_ts*d2 + h_rs*d1)/d) * sqrt((0.002*d)/(lambda*d1*d2));
+        heights.push_back(h);
+        d1s.push_back(d1);
+        d2s.push_back(d2);
+        Sts.push_back(St);
+        Srs.push_back(Sr);
+        nus.push_back(nu);
     }
 
-    // Find the index of the highest point
-    int i = std::distance(heights.begin(), std::max_element(heights.begin(), heights.end()));
+    // Find the intermediate profile point with the hightest slope.
+    double St_max = *std::max_element(Sts.begin(), Sts.end());
 
-    // Calculate diffraction loss based on ITU-R P.526-15 Section 4.1 Eq. 31 (page - 19)
-    double h = heights[i]; // height of obstruction above the LoS in m
-    double d1 = d1s[i];    // distance from transmitting antenna in m
-    double d2 = d2s[i];    // distance from the receiving antenna in m
-    double f = this->radio_frequency * 1'000'000'000; // Hz
-    double C = 299'792'458.0; // speed of light in m/s
-    double lambda = C/f; // wavelength in m
-    double a_m = 0.0; // dB
-    if(d1 != 0.0 && d2 != 0.0)
+    // Calculate knife-edge loss for the Bullington point
+    auto knife_edge_loss = [](double nu) 
     {
-        double nu = h * sqrt((2.0/lambda) * ((1/d1) + (1/d2))); // ITU-R P.526-15 Section 4.1 Eq. 26 (page - 17)
-        double J = (nu > -0.78)? 6.9 + 20.0 * std::log10(sqrt(pow(nu-0.1, 2.0) + 1.0) + nu -0.1) : 0.0; // dB
-        double a_m1 = std::max(J, 0.0); // dB
-        double a_m2 = get_diffraction_loss(sea_points[i], p2, time);// dB
-        a_m = a_m1 + a_m2; // dB
+        double loss = (nu > -0.78)? 6.9 + 20.0 * std::log10(sqrt(pow(nu-0.1, 2.0) + 1.0) + nu -0.1) : 0.0; // dB
+        return loss;
+    };
+    double L_uc = 0.0; 
+    if(St_max < S_tr)
+    {
+        // Path is LoS
+        double nu_max = *std::max_element(nus.begin(), nus.end());
+        L_uc = knife_edge_loss(nu_max);
     }
+    else
+    {
+        // Path is trans-horizon
+        double Sr_max = *std::max_element(Srs.begin(), Srs.end());
+        double db = (h_rs - h_ts + Sr_max*d)/(St_max + Sr_max); // Km
+        double nu_b = (h_ts + St_max*db - (h_ts*(d-db) + h_rs*db)/d) * sqrt((0.002*d)/(lambda*db*(d-db)));
+        L_uc = knife_edge_loss(nu_b);
+    }
+    
+    // Calculate the Bullington diffraction loss for the path
+    double L_b = L_uc + (1 - exp(-L_uc/6.0))*(10.0 + 0.02*d); // dB
 
-    return a_m;
+    return L_b;
 }
 
 void Simulate_LOS::run_headless_diffraction_and_path_loss(std::ofstream& fout, double total_simulation_time)
