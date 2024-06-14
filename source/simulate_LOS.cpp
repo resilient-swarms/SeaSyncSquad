@@ -349,7 +349,7 @@ double Simulate_LOS::get_diffraction_loss(const union Coordinates_3D& p1, const 
                               (p.keys.y - p1.keys.y)*(p.keys.y - p1.keys.y));
         double z = p1.keys.z + (p2.keys.z - p1.keys.z) * d_point/d_total;
         // Calculate the height of the current point above LOS
-        double height = p.keys.z - z;
+        double height = p.keys.z - z; // Height is positive for points above LoS else negative. 
         heights.push_back(height);
         d1s.push_back(d_point);
         d2s.push_back(d_total - d_point);
@@ -358,15 +358,22 @@ double Simulate_LOS::get_diffraction_loss(const union Coordinates_3D& p1, const 
     // Find the index of the highest point
     int i = std::distance(heights.begin(), std::max_element(heights.begin(), heights.end()));
 
-    // Calculate diffraction loss
-    double d1 = d1s[i] / 1000.0; // Km
-    double d2 = d2s[i] / 1000.0; // Km
-    double h = heights[i];
-    double f = this->radio_frequency * 1000.0; // MHz
-    double r = 548 * sqrt((d1*d2)/(f*(d1+d2)));
-    double a_m1 = (h > r && d1 != 0.0 && d2 != 0.0)? (20.0 * std::log10(h/r)) + 16 : 0.0; // dB
-    double a_m2 = (h > r && d1 != 0.0 && d2 != 0.0)? get_diffraction_loss(sea_points[i], p2, time) : 0.0;// dB
-    double a_m = a_m1 + a_m2; // dB
+    // Calculate diffraction loss based on ITU-R P.526-15 Section 4.1 Eq. 31 (page - 19)
+    double h = heights[i]; // height of obstruction above the LoS in m
+    double d1 = d1s[i];    // distance from transmitting antenna in m
+    double d2 = d2s[i];    // distance from the receiving antenna in m
+    double f = this->radio_frequency * 1'000'000'000; // Hz
+    double C = 299'792'458.0; // speed of light in m/s
+    double lambda = C/f; // wavelength in m
+    double a_m = 0.0; // dB
+    if(d1 != 0.0 && d2 != 0.0)
+    {
+        double nu = h * sqrt((2.0/lambda) * ((1/d1) + (1/d2))); // ITU-R P.526-15 Section 4.1 Eq. 26 (page - 17)
+        double J = (nu > -0.78)? 6.9 + 20.0 * std::log10(sqrt(pow(nu-0.1, 2.0) + 1.0) + nu -0.1) : 0.0; // dB
+        double a_m1 = std::max(J, 0.0); // dB
+        double a_m2 = get_diffraction_loss(sea_points[i], p2, time);// dB
+        a_m = a_m1 + a_m2; // dB
+    }
 
     return a_m;
 }
