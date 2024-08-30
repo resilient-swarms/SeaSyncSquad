@@ -4,3 +4,6 @@
 [submodule "dependency/matplotlib-cpp"]
 	path = dependency/matplotlib-cpp
 	url = git@github.com:TobyThomasTech/matplotlib-cpp.git
+[submodule "dependency/StormExplorers"]
+	path = dependency/StormExplorers
+	url = git@github.com:resilient-swarms/StormExplorers.git
