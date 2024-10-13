@@ -86,8 +86,8 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
                              << result.significant_wave_ht << "," // m
                              << result.wind_speed*3.6 << "," // km/hr
                              << result.rainfall_rate << "," // mm/hr
-                             << result.antenna_height << ","
-                             << result.radio_frequency << ","
+                             << result.antenna_height << "," // m
+                             << result.radio_frequency/1'000'000 << "," // MHz
                              << result.free_space_path_loss << "," // dB
                              << result.diffraction_loss << "," // dB
                              << result.rain_attenuation << "," // dB
