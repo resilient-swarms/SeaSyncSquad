@@ -24,6 +24,7 @@ public:
         double rainfall_rate);
     ~RadioAttenuation();
 
+    double antenna_height;
     double radio_frequency; // Hz
     Polarisation polarisation;
     double communication_distance; // m
@@ -52,7 +53,6 @@ private:
     struct Asv_specification* asv_spec;
     struct Asv* asv1;
     struct Asv* asv2;
-    double antenna_height;
     double time_step_size;
     double total_simulation_time;
 };

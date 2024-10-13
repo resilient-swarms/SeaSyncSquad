@@ -17,10 +17,9 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
     }
     std::string file_name = dir_results + "/results.csv";
     std::ofstream file(file_name); // write results to file
-    file << "distance(km),rainfall(mm/hr),wind_speed(km/hr),sig_wave_ht(m),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
+    file << "distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
 
-    double radio_frequency = 5.2; // Ghz
-    Polarisation polarisation = Polarisation::horizontal;
+    Polarisation polarisation = Polarisation::vertical; // Widely used in maritime communications, especially for line-of-sight VHF and UHF radio communication systems, including ship-to-ship and ship-to-shore links.
     std::vector<std::future<void>> futures; // List of threads
     // Generate all scenarios to run
     std::vector<double> distances;
@@ -68,7 +67,12 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
         std::mutex file_mutex;
         for(int i = jobs_start_index; i < jobs_end_index; ++i) {
             std::cout<<"["<<i<<" / "<<count_total_scenarios<<"]";
-            std::cout<<" distance = "<<distances[i]<<" wave_ht = "<<significant_wave_hts[i]<<"  wind_speed = "<<wind_speeds[i]<<" rainfall = "<<rainfall_rates[i]<<std::endl;
+            std::cout<<" distance = "<<distances[i];
+            std::cout<<" wave_ht = "<<significant_wave_hts[i];
+            std::cout<<"  wind_speed = "<<wind_speeds[i];
+            std::cout<<" rainfall = "<<rainfall_rates[i];
+            std::cout<<" ant_ht = "<<antenna_hts[i];
+            std::cout<<" freq = "<<radio_frequencies[i]<<std::endl;
             double ant_ht = antenna_hts[i];
             double frequency = radio_frequencies[i] * 1'000'000; // Hz
             double distance = distances[i] * 1000.0; // m
@@ -79,9 +83,11 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
                          RadioAttenuation result(ant_ht, frequency, polarisation, distance, wave_ht, wind_speed, rainfall_rate);
                          std::lock_guard<std::mutex> lock(file_mutex);
                          file << result.communication_distance/1000.0 << "," // km
-                             << result.rainfall_rate << "," // mm/hr
-                             << result.wind_speed*3.6 << "," // km/hr
                              << result.significant_wave_ht << "," // m
+                             << result.wind_speed*3.6 << "," // km/hr
+                             << result.rainfall_rate << "," // mm/hr
+                             << result.antenna_height << ","
+                             << result.radio_frequency << ","
                              << result.free_space_path_loss << "," // dB
                              << result.diffraction_loss << "," // dB
                              << result.rain_attenuation << "," // dB
@@ -106,5 +112,4 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
     file.close();
 }
 
-// TODO:
-// plot results like before
+// TODO: plot results
