@@ -15,7 +15,7 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
     {
         std::filesystem::create_directory(dir_results);
     }
-    std::string file_name = dir_results + "/results.csv";
+    std::string file_name = dir_results + "/radio_attenuation_data.csv";
     std::ofstream file(file_name); // write results to file
     file << "distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
 
