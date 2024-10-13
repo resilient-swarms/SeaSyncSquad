@@ -1,10 +1,22 @@
 #include "radio_attenuation.h"
 #include <array>
 #include <vector>
+#include <string>
 #include <iostream>
 #include <fstream>
+#include <thread>
+#include <filesystem>
 
-int main() {
+int main(int argc, char * argv[]){ // only one argument expected, and assuming it is the path to the results directory.
+    std::string dir_results = argv[1];
+    std::string dir_simulation_logs = dir_results + "/simulation_logs";
+
+    // Create the results directory if it doesn't exist
+    if(!std::filesystem::exists(dir_results))
+    {
+        std::filesystem::create_directory(dir_results);
+    }
+
     double radio_frequency = 5.2; // Ghz
     Polarisation polarisation = Polarisation::horizontal;
     std::array<double, 5> distances = {10, 50, 100, 150, 200}; // km
@@ -21,12 +33,14 @@ int main() {
     std::vector<double> df_sea_spray_attenuations;
     std::vector<double> df_total_losses;
     // Calculate attenuation
+    int total_cases = distances.size() * rainfall_rates.size() * wind_speeds.size() * significant_wave_hts.size();
+    int counter = 0;
     for(double distance : distances) {
-        for(double rainfall_rate : rainfall_rates) {
+        for(double significant_wave_ht : significant_wave_hts){
             for(double wind_speed : wind_speeds) {
-                for(double significant_wave_ht : significant_wave_hts) {
-                    std::cout << distance << ", " << rainfall_rate << ", " << wind_speed << ", " << significant_wave_ht << std::endl;
-                    double f = radio_frequency * 1000000000.0; // Hz
+                 for(double rainfall_rate : rainfall_rates){
+                    std::cout << "[" << ++counter << "/" << total_cases << "]  " << distance << ", " << rainfall_rate << ", " << wind_speed << ", " << significant_wave_ht << std::endl;
+                    double f = radio_frequency * 1'000'000'000; // Hz
                     double d = distance * 1000.0; // m
                     double s = wind_speed/3.6; // m/s
                     RadioAttenuation radio_attenuation(f, polarisation, d, significant_wave_ht, s, rainfall_rate);
@@ -58,3 +72,9 @@ int main() {
            << df_total_losses[i] << std::endl;
     }
 }
+
+
+// main to take a output destination
+// Each case to wrte to a file
+// Multi thread
+// also simulate for varying antenna height

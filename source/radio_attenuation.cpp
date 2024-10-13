@@ -9,12 +9,13 @@ void RadioAttenuation::create_equidistant_points(const union Coordinates_3D& p1,
                                                  std::vector<union Coordinates_3D>& points,
                                                  std::vector<double>& offsets)
 {
-    // // Calculate the offsets along the line (m)
-    // // Lets set the offset as (peak wave length)/10.
+    // Calculate the offsets along the line (m)
+    // Lets set the offset as (peak wave length)/10.
     // double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
     // double peak_wave_length = G/(2.0 * PI * peak_freq*peak_freq);
     // double d = peak_wave_length/10.0; // offset distance along the line (m)
-    double d = 10.0; // offset distance along the line (m)
+    // double d = 10.0; // offset distance along the line (m)
+    double d = this->communication_distance/100.0;
 
     double sigma_d = 0.0; // cumulative offsets along the line (m)
     double total_d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) +
@@ -72,7 +73,7 @@ void RadioAttenuation::set_diffraction_loss() {
         double R = 6378.0; // Radius of earth in Km
         double Ce = 1/R; // Curvature of earth in Km^-1
         double C = 299'792'458.0; // speed of light in m/s
-        double f = this->radio_frequency * 1'000'000'000; // Hz
+        double f = this->radio_frequency; // Hz
         double lambda = C/f; // wavelength in m
         double h_ts = p1.keys.z + this->antenna_height; // height of transmitter in m.
         double h_rs = p2.keys.z + this->antenna_height; // height of receiver in m.
@@ -265,7 +266,7 @@ RadioAttenuation::RadioAttenuation(double radio_frequency, Polarisation polarisa
     this->total_simulation_time = 15.0 * 60.0; // sec
 
     // Set antenna height
-    this->antenna_height = 5.0; // m
+    this->antenna_height = 2.0; // m
 
     // Initialise the sea surface
     double wave_dp = PI/3.0; // rad

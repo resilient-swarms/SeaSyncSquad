@@ -14,7 +14,12 @@ enum class Polarisation {horizontal, vertical};
 
 class RadioAttenuation {
 public:
-    RadioAttenuation(double radio_frequency, Polarisation polarisation, double communication_distance, double significant_wave_ht, double wind_speed, double rainfall_rate);
+    RadioAttenuation(double radio_frequency,
+                    Polarisation polarisation,
+                    double communication_distance,
+                    double significant_wave_ht,
+                    double wind_speed,
+                    double rainfall_rate);
     ~RadioAttenuation();
 
     double radio_frequency; // Hz
