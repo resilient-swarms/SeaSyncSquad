@@ -17,30 +17,66 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
     }
     std::string file_name = dir_results + "/results.csv";
     std::ofstream file(file_name); // write results to file
+    file << "distance(km),rainfall(mm/hr),wind_speed(km/hr),sig_wave_ht(m),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
 
     double radio_frequency = 5.2; // Ghz
     Polarisation polarisation = Polarisation::horizontal;
-    std::array<double, 5> distances = {10, 50, 100, 150, 200}; // km
-    std::array<double, 5> rainfall_rates = {5, 25, 50, 100, 150}; // mm/hr
-    std::array<double, 7> wind_speeds = {50, 100, 150, 200, 250, 300, 350}; // km/hr
-    std::array<double, 5> significant_wave_hts = {3.0, 5.0, 7.5, 10, 12}; // m
     std::vector<std::future<void>> futures; // List of threads
-    // Calculate attenuation
-    int total_cases = distances.size() * rainfall_rates.size() * wind_speeds.size() * significant_wave_hts.size();
-    int counter = 0;
-    file << "distance(km),rainfall(mm/hr),wind_speed(km/hr),sig_wave_ht(m),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
-    std::mutex file_mutex;
-    for(double distance : distances) {
-        for(double significant_wave_ht : significant_wave_hts){
-            for(double wind_speed : wind_speeds) {
-                 for(double rainfall_rate : rainfall_rates){
-                     std::cout << "[" << ++counter << "/" << total_cases << "]  " << distance << ", " << rainfall_rate << ", " << wind_speed << ", " << significant_wave_ht << std::endl;
-                     double f = radio_frequency * 1'000'000'000; // Hz
-                     double d = distance * 1000.0; // m
-                     double s = wind_speed/3.6; // m/s
-                     // Using std::async to construct each MyClass instance in parallel
-                     futures.push_back(std::async(std::launch::async, [&]() {
-                         RadioAttenuation result(f, polarisation, d, significant_wave_ht, s, rainfall_rate);
+    // Generate all scenarios to run
+    std::vector<double> distances;
+    std::vector<double> significant_wave_hts;
+    std::vector<double> wind_speeds;
+    std::vector<double> rainfall_rates;
+    std::vector<double> antenna_hts;
+    std::vector<double> radio_frequencies;
+    for(double distance : {10.0, 50.0, 100.0, 150.0, 200.0}) {
+        // km
+        for(double significant_wave_ht : {5.0, 25.0, 50.0, 100.0, 150.0}) {
+            // mm/hr
+            for(double wind_speed : {50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0}) {
+                // km/hr
+                for(double rainfall_rate : {3.0, 5.0, 7.5, 10.0, 12.0}) {
+                    // m
+                    for(double antenna_ht : {1.0, 2.0, 3.0, 4.0, 5.0}) {
+                        // m
+                        for(double radio_frequency : {160.0, 300.0, 500.0, 800.0, 1000.0, 2400.0, 5200.0}) {
+                            // MHz
+                            distances.push_back(distance);
+                            significant_wave_hts.push_back(significant_wave_ht);
+                            wind_speeds.push_back(wind_speed);
+                            rainfall_rates.push_back(rainfall_rate);
+                            antenna_hts.push_back(antenna_ht);
+                            radio_frequencies.push_back(radio_frequency);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Spawn threads and calculate attenuation for each scenario. 
+    int max_pool_size = std::thread::hardware_concurrency();
+    std::cout<<"Hardware concurrency = "<<max_pool_size<<"\n";
+    int jobs_start_index = 0;
+    int jobs_end_index = 0;
+    int count_total_scenarios = distances.size();
+    while(jobs_end_index < count_total_scenarios) {
+        std::cout<<std::endl;
+        int count_jobs_remaining = count_total_scenarios - jobs_end_index;
+        jobs_end_index = jobs_start_index + std::min(max_pool_size, count_jobs_remaining);
+        std::vector<std::thread*> thread_pool;
+        // Spawn threads
+        std::mutex file_mutex;
+        for(int i = jobs_start_index; i < jobs_end_index; ++i) {
+            std::cout<<"["<<i<<" / "<<count_total_scenarios<<"]";
+            std::cout<<" distance = "<<distances[i]<<" wave_ht = "<<significant_wave_hts[i]<<"  wind_speed = "<<wind_speeds[i]<<" rainfall = "<<rainfall_rates[i]<<std::endl;
+            double ant_ht = antenna_hts[i];
+            double frequency = radio_frequencies[i] * 1'000'000; // Hz
+            double distance = distances[i] * 1000.0; // m
+            double wind_speed = wind_speeds[i]/3.6; // m/s
+            double wave_ht = significant_wave_hts[i]; // m
+            double rainfall_rate = rainfall_rates[i]; // mm/hr
+            std::thread* thread_object = new std::thread([&]() {
+                         RadioAttenuation result(ant_ht, frequency, polarisation, distance, wave_ht, wind_speed, rainfall_rate);
                          std::lock_guard<std::mutex> lock(file_mutex);
                          file << result.communication_distance/1000.0 << "," // km
                              << result.rainfall_rate << "," // mm/hr
@@ -51,19 +87,24 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
                              << result.rain_attenuation << "," // dB
                              << result.sea_spray_attenuation << "," // dB
                              << result.total_attenuation << std::endl; // dB
-                     }));
-                }
-            }
+                     });
+            thread_pool.push_back(thread_object);
         }
-    }
-    for(auto& future : futures) {
-        future.wait();
+        // Join the threads
+        for(auto thread : thread_pool)
+        {
+            thread->join();
+        }
+        // Free memory
+        for(auto thread : thread_pool)
+        {
+            delete thread;
+        }
+        thread_pool.clear();
+        jobs_start_index = jobs_end_index;
     }
     file.close();
 }
 
 // TODO:
-// Limit multithreadin to the number of cores.
-// simulate for varying antenna height
-// simulate for different frequencies
 // plot results like before

@@ -253,7 +253,8 @@ void RadioAttenuation::set_sea_spray_attenuation() {
     this->sea_spray_attenuation = A * M * d;
 }
 
-RadioAttenuation::RadioAttenuation(double radio_frequency, Polarisation polarisation, double communication_distance, double significant_wave_ht, double wind_speed, double rainfall_rate) {
+RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, double communication_distance, double significant_wave_ht, double wind_speed, double rainfall_rate) {
+    this->antenna_height = antenna_ht; // m
     this->radio_frequency = radio_frequency;
     this->polarisation = polarisation;
     this->communication_distance = communication_distance;
@@ -264,9 +265,6 @@ RadioAttenuation::RadioAttenuation(double radio_frequency, Polarisation polarisa
     // Set simulation clock
     this->time_step_size = 40.0; // milli-sec
     this->total_simulation_time = 15.0 * 60.0; // sec
-
-    // Set antenna height
-    this->antenna_height = 2.0; // m
 
     // Initialise the sea surface
     double wave_dp = PI/3.0; // rad
