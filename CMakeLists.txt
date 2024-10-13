@@ -18,4 +18,8 @@ set( SOURCE
         dependency/ASVLite/source/asv.c
 )
 
-add_executable(SeaSyncSquad ${SOURCE})
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
+
+find_package(Threads REQUIRED)
+
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Threads::Threads)
