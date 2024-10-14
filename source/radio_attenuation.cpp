@@ -51,9 +51,9 @@ void RadioAttenuation::create_equidistant_points(const union Coordinates_3D& p1,
 
 void RadioAttenuation::set_free_space_path_loss() {
     // Ref: ITU-R P.525-4
-    double f = this->radio_frequency/1000000.0; // MHz
+    double f = this->radio_frequency/1'000'000.0; // MHz
     double d = this->communication_distance/1000.0; // Km
-    this->free_space_path_loss = 32.4 + 20.0*std::log10(f); + 20.0*std::log10(d);
+    this->free_space_path_loss = 32.4 + 20.0*std::log10(f) + 20.0*std::log10(d);
 }
 
 void RadioAttenuation::set_diffraction_loss() {
