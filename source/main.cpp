@@ -38,8 +38,8 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
                     // m
                     for(double antenna_ht : {1.0, 2.0, 3.0, 4.0, 5.0}) {
                         // m
-                        for(double radio_frequency : {160.0, 300.0, 500.0, 800.0, 1000.0, 2400.0, 5200.0}) {
-                            // MHz
+                        for(double radio_frequency : {2400.0, 5200.0}) {
+                            // GHz
                             distances.push_back(distance);
                             significant_wave_hts.push_back(significant_wave_ht);
                             wind_speeds.push_back(wind_speed);

@@ -78,7 +78,7 @@ void RadioAttenuation::set_diffraction_loss() {
         double h_ts = p1.keys.z + this->antenna_height; // height of transmitter in m.
         double h_rs = p2.keys.z + this->antenna_height; // height of receiver in m.
         double d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y)) / 1000.0; // Total distance between p1 and p2 in Km
-        double S_tr = (h_rs - h_ts)/d; // Slope of line from transmitter to receiver in m/Km
+        double S_tr = (h_rs - h_ts)/d; // Slope of line from transmitter to receiver in m/Km, Ref ITU-R P.526-15, Section 4.5.1, Eq-49
 
         // Create equidistant points
         std::vector<union Coordinates_3D> sea_points;
@@ -138,10 +138,10 @@ void RadioAttenuation::set_diffraction_loss() {
             L_uc = knife_edge_loss(nu_b);
         }
 
-        // Calculate and the Bullington diffraction loss for the path
-        double diffraction_loss = L_uc + (1 - exp(-L_uc/6.0))*(10.0 + 0.02*d); // dB
-        if(diffraction_loss > this->diffraction_loss) {
-            this->diffraction_loss = diffraction_loss;
+        // Calculate Bullington diffraction loss for the path
+        double loss = L_uc + (1 - exp(-L_uc/6.0))*(10.0 + 0.02*d); // dB
+        if(loss > this->diffraction_loss) {
+            this->diffraction_loss = loss;
         }
     }
 }
@@ -215,7 +215,7 @@ void RadioAttenuation::set_rain_attenuation() {
     if(this->polarisation == Polarisation::horizontal) {
         alpha = calc_alpha(a_alpha_h, b_alpha_h, c_alpha_h, M_alpha_h, C_alpha_h);
     } else {
-        log10_k = calc_alpha(a_alpha_v, b_alpha_v, c_alpha_v, M_alpha_v, C_alpha_v);
+        alpha = calc_alpha(a_alpha_v, b_alpha_v, c_alpha_v, M_alpha_v, C_alpha_v);
     }
     // Rain attenuation
     double d = this->communication_distance/1000.0; // Km
@@ -224,6 +224,11 @@ void RadioAttenuation::set_rain_attenuation() {
 
 
 void RadioAttenuation::set_sea_spray_attenuation() {
+    // There are two parts to this caluclation
+    // part 1 - estimation of volume of sea spray in air, computed as a function of sea state and wind speed,
+    // part 2 - estimation of signal attenuation, based on ITU-R P.840.9
+
+    // Part - 1
     // Ref: A Wind–Wave-Dependent Sea Spray Volume Flux Model Based on Field Experiments, Xingkun Xu, 2021
     // V = U * 1.99 * sqrt(s) * 10^-8
     // where:
@@ -241,16 +246,24 @@ void RadioAttenuation::set_sea_spray_attenuation() {
     // Calculate mass flux
     double sea_water_density = 1025 * 1000; // g/m3
     double M = V * sea_water_density;
-    // Calculate attenuation in (dB/km)/(g/m3)
-    // Ref - Atmospheric Attenuation due to Humidity, Ch-8, Section 4, Eq. 14
-    double C = 299792458;  // Speed of light in m/s
-    double wave_length = C / (this->radio_frequency); // m
-    wave_length = wave_length * 1000.0; // mm
-    double T0 = 25;  // deg C
-    double A = -1.347 + 0.0372 * wave_length + 18 / wave_length - 0.022 * T0; // (dB/km)/(g/m3)
+
+    // Part - 2
+    // Ref - ITU-R P.840-9
+    double f = this->radio_frequency/1'000'000'000.0; // GHz
+    double T = 25.0; // deg C
+    T = T + 273.15; // Kelvim
+    double epsilon_0 = 77.66 + 103.3 * (300.0/T - 1);
+    double epsilon_1 = 0.0671 * epsilon_0;
+    double epsilon_2 = 3.52;
+    double f_p = 20.20 - 146.0*(300.0/T - 1) + 316.0*std::pow(300.0/T - 1, 2); // GHz
+    double f_s = 39.8 * f_p;
+    double epsilon__ = f*(epsilon_0 - epsilon_1)/(f_p*(1 + std::pow(f/f_p, 2))) + f*(epsilon_1 - epsilon_2)/(f_s*(1 + std::pow(f/f_s, 2)));
+    double epsilon_ = (epsilon_0 - epsilon_1)/(1 + std::pow(f/f_p, 2)) + (epsilon_1 - epsilon_2)/(1 + std::pow(f/f_s, 2)) + epsilon_2;
+    double eta = (2.0 + epsilon_)/epsilon__;
+    double K = 0.819*f/(epsilon__*(1 + eta*eta)); // (dB/km)/(g/m3)
     // Calculate total attenuation due to sea water
     double d = this->communication_distance/1000.0; // Km
-    this->sea_spray_attenuation = A * M * d;
+    this->sea_spray_attenuation = K * M * d;
 }
 
 RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, double communication_distance, double significant_wave_ht, double wind_speed, double rainfall_rate) {
