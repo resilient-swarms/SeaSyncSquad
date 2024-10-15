@@ -32,7 +32,8 @@ public:
     double wind_speed; // m/s
     double rainfall_rate; // mm/hr
     double free_space_path_loss; // dB
-    double diffraction_loss; // dB
+    std::vector<double> diffraction_loss; // dB
+    double diffraction_loss_mean; // dB
     double rain_attenuation; // dB
     double sea_spray_attenuation; // dB
     double total_attenuation; //

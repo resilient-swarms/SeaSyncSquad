@@ -6,6 +6,7 @@
 #include <fstream>
 #include <future>
 #include <filesystem>
+#include <numeric>
 
 
 int main(int argc, char * argv[]){ // only one argument expected, and assuming it is the path to the results directory.
@@ -80,20 +81,34 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
             double wave_ht = significant_wave_hts[i]; // m
             double rainfall_rate = rainfall_rates[i]; // mm/hr
             std::thread* thread_object = new std::thread([&]() {
-                         RadioAttenuation result(ant_ht, frequency, polarisation, distance, wave_ht, wind_speed, rainfall_rate);
-                         std::lock_guard<std::mutex> lock(file_mutex);
-                         file << result.communication_distance/1000.0 << "," // km
-                             << result.significant_wave_ht << "," // m
-                             << result.wind_speed*3.6 << "," // km/hr
-                             << result.rainfall_rate << "," // mm/hr
-                             << result.antenna_height << "," // m
-                             << result.radio_frequency/1'000'000 << "," // MHz
-                             << result.free_space_path_loss << "," // dB
-                             << result.diffraction_loss << "," // dB
-                             << result.rain_attenuation << "," // dB
-                             << result.sea_spray_attenuation << "," // dB
-                             << result.total_attenuation << std::endl; // dB
-                     });
+                RadioAttenuation result(ant_ht, frequency, polarisation, distance, wave_ht, wind_speed, rainfall_rate);
+                std::lock_guard<std::mutex> lock(file_mutex);
+                file << result.communication_distance/1000.0 << "," // km
+                    << result.significant_wave_ht << "," // m
+                    << result.wind_speed*3.6 << "," // km/hr
+                    << result.rainfall_rate << "," // mm/hr
+                    << result.antenna_height << "," // m
+                    << result.radio_frequency/1'000'000 << "," // MHz
+                    << result.free_space_path_loss << "," // dB
+                    << result.diffraction_loss_mean << "," // dB
+                    << result.rain_attenuation << "," // dB
+                    << result.sea_spray_attenuation << "," // dB
+                    << result.total_attenuation << std::endl; // dB
+                // Also write the diffraction losses from each timestep of simulation to a file
+                std::string file_name_diffraction = dir_results +
+                    "/diffraction_loss_" +
+                    std::to_string(int(result.communication_distance/1000.0)) + "_" +
+                    std::to_string(int(result.significant_wave_ht)) + "_" +
+                    std::to_string(int(result.wind_speed)) + "_" +
+                    std::to_string(int(result.rainfall_rate)) + "_" +
+                    std::to_string(int(result.antenna_height)) + "_" +
+                    std::to_string(int(result.radio_frequency/1'000'000)) + ".txt";
+                std::ofstream file_diffraction(file_name_diffraction); // write results to file
+                file_diffraction << "diffraction_loss(dB)"<<std::endl;
+                for(int i = 0; i < result.diffraction_loss.size(); ++i) {
+                    file_diffraction << result.diffraction_loss[i] << std::endl;
+                }
+            });
             thread_pool.push_back(thread_object);
         }
         // Join the threads

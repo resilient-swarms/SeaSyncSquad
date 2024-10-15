@@ -2,6 +2,7 @@
 #include <cmath>
 #include <array>
 #include <algorithm>
+#include <numeric>
 
 void RadioAttenuation::create_equidistant_points(const union Coordinates_3D& p1,
                                                  const union Coordinates_3D& p2,
@@ -58,8 +59,6 @@ void RadioAttenuation::set_free_space_path_loss() {
 
 void RadioAttenuation::set_diffraction_loss() {
     // Ref: ITU-R P.526-15 Section 4.5 and 4.1
-    this->diffraction_loss = 0.0;
-
     for(double time = 0; time < this->total_simulation_time; time += this->time_step_size/1000.0) {
         // We will use a fixed rudder angle for both ASVs
         double rudder_angle = PI/4; // rad
@@ -140,10 +139,9 @@ void RadioAttenuation::set_diffraction_loss() {
 
         // Calculate Bullington diffraction loss for the path
         double loss = L_uc + (1 - exp(-L_uc/6.0))*(10.0 + 0.02*d); // dB
-        if(loss > this->diffraction_loss) {
-            this->diffraction_loss = loss;
-        }
+        this->diffraction_loss.push_back(loss);
     }
+    this->diffraction_loss_mean = std::accumulate(this->diffraction_loss.begin(), this->diffraction_loss.end(), 0.0)/this->diffraction_loss.size();
 }
 
 void RadioAttenuation::set_rain_attenuation() {
@@ -321,7 +319,7 @@ RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Po
     this->set_diffraction_loss();
     this->set_rain_attenuation();
     this->set_sea_spray_attenuation();
-    this->total_attenuation = this->free_space_path_loss + this->diffraction_loss + this->rain_attenuation + this->sea_spray_attenuation;
+    this->total_attenuation = this->free_space_path_loss + this->diffraction_loss_mean + this->rain_attenuation + this->sea_spray_attenuation;
 }
 
 RadioAttenuation::~RadioAttenuation() {
