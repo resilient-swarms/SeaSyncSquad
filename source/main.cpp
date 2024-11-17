@@ -31,11 +31,11 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
     std::vector<double> radio_frequencies;
     for(double distance : {10.0, 50.0, 100.0, 150.0, 200.0}) {
         // km
-        for(double significant_wave_ht : {3.0, 5.0, 7.5, 10.0, 12.0}) {
+        for(double significant_wave_ht : {3.0, 5.0, 7.5, 10.0, 12.0, 15.0}) {
             // mm/hr
             for(double wind_speed : {50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0}) {
                 // km/hr
-                for(double rainfall_rate : {2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0}) {
+                for(double rainfall_rate : {2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0, 30.0, 40.0, 50.0}) {
                     // m
                     for(double antenna_ht : {1.0, 2.0, 3.0, 4.0, 5.0}) {
                         // m
@@ -126,5 +126,3 @@ int main(int argc, char * argv[]){ // only one argument expected, and assuming i
     }
     file.close();
 }
-
-// TODO: plot results
