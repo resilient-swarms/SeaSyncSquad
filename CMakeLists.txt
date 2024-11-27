@@ -9,14 +9,14 @@ include_directories(
 )
 
 set( SOURCE
-#        source/main.cpp
+        source/main.cpp
         source/radio_attenuation.cpp
         dependency/ASVLite/source/errors.c
         dependency/ASVLite/source/geometry.c
         dependency/ASVLite/source/regular_wave.c
         dependency/ASVLite/source/sea_surface.c
         dependency/ASVLite/source/asv.c
-        source/key_scale_parameters.cpp
+#        source/data_generation_waveglider_speeds.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})

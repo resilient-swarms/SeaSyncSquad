@@ -1,3 +1,5 @@
+// This file runs simulations for various sea states and generates data on the resulting wave glider speeds.
+
 extern "C" {
 #include "constants.h"
 #include "geometry.h"
