@@ -15,7 +15,7 @@ set( SOURCE
         dependency/ASVLite/source/regular_wave.c
         dependency/ASVLite/source/sea_surface.c
         dependency/ASVLite/source/asv.c
-#        source/data_generation_waveglider_speeds.cpp
+#        source/data_generation_waveglider_speed.cpp
 #        source/data_generation_radio_attenuation.cpp
 )
 
