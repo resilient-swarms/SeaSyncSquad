@@ -9,7 +9,6 @@ include_directories(
 )
 
 set( SOURCE
-        source/main.cpp
         source/radio_attenuation.cpp
         dependency/ASVLite/source/errors.c
         dependency/ASVLite/source/geometry.c
@@ -17,6 +16,7 @@ set( SOURCE
         dependency/ASVLite/source/sea_surface.c
         dependency/ASVLite/source/asv.c
 #        source/data_generation_waveglider_speeds.cpp
+#        source/data_generation_radio_attenuation.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
