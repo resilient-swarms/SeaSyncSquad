@@ -7,7 +7,7 @@
 #include <iostream>
 
 NetCDF_wave::NetCDF_wave(std::filesystem::path file_path) {
-    std::cout << "Initialising wave data from file " << file_path << " ..." << std::endl;
+    std::cout << "Initialising wave data from file " << file_path << "..." << std::endl;
     netCDF::NcFile nc_file(file_path, netCDF::NcFile::read);
 
     // Get valid time

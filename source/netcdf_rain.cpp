@@ -7,7 +7,7 @@
 #include <iostream>
 
 NetCDF_rain::NetCDF_rain(std::filesystem::path file_path) {
-    std::cout << "Initialising rainfall data from file " << file_path << " ..." << std::endl;
+    std::cout << "Initialising rainfall data from file " << file_path << "..." << std::endl;
     netCDF::NcFile nc_file(file_path, netCDF::NcFile::read);
 
     // Get valid time

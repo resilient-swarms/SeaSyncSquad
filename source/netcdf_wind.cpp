@@ -7,7 +7,7 @@
 #include <iostream>
 
 NetCDF_wind::NetCDF_wind(std::filesystem::path file_path) {
-    std::cout << "Initialising wind data from file " << file_path << " ..." << std::endl;
+    std::cout << "Initialising wind data from file " << file_path << "..." << std::endl;
     netCDF::NcFile nc_file(file_path, netCDF::NcFile::read);
 
     // Get valid time

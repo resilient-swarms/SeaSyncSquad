@@ -32,7 +32,7 @@ storm_name(storm_name) {
         int year_from_line = std::stoi(words[index_year]);
         std::string name_from_line = words[index_name];
         if (year_from_line == storm_year && name_from_line == storm_name) {
-            std::cout<<"Initialising " << words[index_name] << " ..." << std::endl;
+            std::cout<<"Initialising " << words[index_name] << "..." << std::endl;
             std::cout<< "... retrieving data from " << storms_database.string() << std::endl;
             // Set timestamps
             std::vector<std::string> time_strings = split(words[index_time_stamps], ';');
