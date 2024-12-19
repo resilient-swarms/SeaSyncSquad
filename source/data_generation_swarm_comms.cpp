@@ -192,8 +192,7 @@ int main(int argc, char * argv[]){
                 // Compute attenuation for each pair
                 for (auto& pair : comms_pairs) {
                     Polarisation polarisation = Polarisation::vertical; // Widely used in maritime communications, especially for line-of-sight VHF and UHF radio communication systems, including ship-to-ship and ship-to-shore links.
-                    RadioAttenuation result(ant_ht, frequency, polarisation, distance, wave_ht, wind_speed, rainfall_rate);
-                    std::cout<<"size = "<<result.diffraction_loss.size()<<std::endl;
+                    RadioAttenuation result(ant_ht, frequency, polarisation, pair, wave_ht, wind_speed, rainfall_rate);
                     for(int i = 0; i < result.diffraction_loss.size(); ++i) {
                         file << i << ","
                         << pair.first.keys.x << "," // m

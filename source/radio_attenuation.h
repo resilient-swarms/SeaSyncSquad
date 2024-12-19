@@ -28,7 +28,7 @@ public:
         double antenna_ht,
         double radio_frequency,
         Polarisation polarisation,
-        std::array<Coordinates_3D, 2> asv_positions,
+        std::pair<Coordinates_3D, Coordinates_3D> asv_positions,
         double significant_wave_ht,
         double wind_speed,
         double rainfall_rate);

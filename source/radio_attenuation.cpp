@@ -278,7 +278,7 @@ RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Po
     RadioAttenuation(antenna_ht, radio_frequency, polarisation, {position1, position2}, significant_wave_ht, wind_speed, rainfall_rate);
 }
 
-RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, std::array<Coordinates_3D, 2> asv_positions, double significant_wave_ht, double wind_speed, double rainfall_rate) {
+RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, std::pair<Coordinates_3D, Coordinates_3D> asv_positions, double significant_wave_ht, double wind_speed, double rainfall_rate) {
     this->antenna_height = antenna_ht; // m
     this->radio_frequency = radio_frequency;
     this->polarisation = polarisation;
@@ -286,10 +286,10 @@ RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Po
     this->significant_wave_ht = significant_wave_ht;
     this->wind_speed = wind_speed;
     this->rainfall_rate = rainfall_rate;
-    double x1 = asv_positions[0].keys.x;
-    double y1 = asv_positions[0].keys.y;
-    double x2 = asv_positions[1].keys.x;
-    double y2 = asv_positions[1].keys.y;
+    double x1 = asv_positions.first.keys.x;
+    double y1 = asv_positions.first.keys.y;
+    double x2 = asv_positions.second.keys.x;
+    double y2 = asv_positions.second.keys.y;
     double delta_x = x2 - x1;
     double delta_y = y2 - y1;
     this->communication_distance = std::sqrt(delta_x*delta_x + delta_y*delta_y);
@@ -319,15 +319,13 @@ RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Po
     bool is_surge_sway_halt_set = true;
 
     // Init ASV-1
-    union Coordinates_3D position1 = asv_positions[0]; // {m, m, m}
     union Coordinates_3D attitude1 {0.0, 0.0, 0.0}; // {rad, rad, rad}
-    this->asv1 = asv_new(*asv_spec, this->sea, position1, attitude1);
+    this->asv1 = asv_new(*asv_spec, this->sea, asv_positions.first, attitude1);
     asv_set_surge_sway_halt(asv1, is_surge_sway_halt_set);
 
     // Init ASV-2
-    union Coordinates_3D position2 = asv_positions[1]; // {m, m, m}
     union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
-    this->asv2 = asv_new(*asv_spec, this->sea, position2, attitude2);
+    this->asv2 = asv_new(*asv_spec, this->sea, asv_positions.second, attitude2);
     asv_set_surge_sway_halt(asv2, is_surge_sway_halt_set);
 
     // Calculate radio attenuation
