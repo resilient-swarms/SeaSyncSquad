@@ -2,6 +2,7 @@
 #define RADIOATTENUATION_H
 
 #include <vector>
+#include <array>
 extern "C" {
 #include "constants.h"
 #include "geometry.h"
@@ -22,6 +23,16 @@ public:
         double significant_wave_ht,
         double wind_speed,
         double rainfall_rate);
+
+    RadioAttenuation(
+        double antenna_ht,
+        double radio_frequency,
+        Polarisation polarisation,
+        std::array<Coordinates_3D, 2> asv_positions,
+        double significant_wave_ht,
+        double wind_speed,
+        double rainfall_rate);
+
     ~RadioAttenuation();
 
     double antenna_height;
@@ -31,6 +42,8 @@ public:
     double significant_wave_ht; // m
     double wind_speed; // m/s
     double rainfall_rate; // mm/hr
+
+    // Results
     double free_space_path_loss; // dB
     std::vector<double> diffraction_loss; // dB
     double diffraction_loss_mean; // dB

@@ -15,8 +15,7 @@ void RadioAttenuation::create_equidistant_points(const union Coordinates_3D& p1,
     // double peak_freq = sea_surface_get_peak_spectral_frequency(this->sea);
     // double peak_wave_length = G/(2.0 * PI * peak_freq*peak_freq);
     // double d = peak_wave_length/10.0; // offset distance along the line (m)
-    // double d = 10.0; // offset distance along the line (m)
-    double d = this->communication_distance/100.0;
+    double d = 10.0; // offset distance along the line (m)
 
     double sigma_d = 0.0; // cumulative offsets along the line (m)
     double total_d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) +
@@ -265,6 +264,21 @@ void RadioAttenuation::set_sea_spray_attenuation() {
 }
 
 RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, double communication_distance, double significant_wave_ht, double wind_speed, double rainfall_rate) {
+    // Position for ASV-1
+    double x1 = 100.0; // m
+    double y1 = 100.0; // m
+    double z = 0.0; // m
+    union Coordinates_3D position1 {x1, y1, z}; // {m, m, m}
+
+    // Position for ASV-2
+    double x2 = x1 + communication_distance; // m
+    double y2 = y1;
+    union Coordinates_3D position2 {x2, y2, 0.0}; // {m, m, m}
+
+    RadioAttenuation(antenna_ht, radio_frequency, polarisation, {position1, position2}, significant_wave_ht, wind_speed, rainfall_rate);
+}
+
+RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, std::array<Coordinates_3D, 2> asv_positions, double significant_wave_ht, double wind_speed, double rainfall_rate) {
     this->antenna_height = antenna_ht; // m
     this->radio_frequency = radio_frequency;
     this->polarisation = polarisation;
@@ -272,6 +286,13 @@ RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Po
     this->significant_wave_ht = significant_wave_ht;
     this->wind_speed = wind_speed;
     this->rainfall_rate = rainfall_rate;
+    double x1 = asv_positions[0].keys.x;
+    double y1 = asv_positions[0].keys.y;
+    double x2 = asv_positions[1].keys.x;
+    double y2 = asv_positions[1].keys.y;
+    double delta_x = x2 - x1;
+    double delta_y = y2 - y1;
+    this->communication_distance = std::sqrt(delta_x*delta_x + delta_y*delta_y);
 
     // Set simulation clock
     this->time_step_size = 40.0; // milli-sec
@@ -298,18 +319,13 @@ RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Po
     bool is_surge_sway_halt_set = true;
 
     // Init ASV-1
-    double x1 = 100.0; // m
-    double y1 = 100.0; // m
-    double z = 0.0; // m
-    union Coordinates_3D position1 {x1, y1, z}; // {m, m, m}
+    union Coordinates_3D position1 = asv_positions[0]; // {m, m, m}
     union Coordinates_3D attitude1 {0.0, 0.0, 0.0}; // {rad, rad, rad}
     this->asv1 = asv_new(*asv_spec, this->sea, position1, attitude1);
     asv_set_surge_sway_halt(asv1, is_surge_sway_halt_set);
 
     // Init ASV-2
-    double x2 = x1 + this->communication_distance; // m
-    double y2 = y1;
-    union Coordinates_3D position2 {x2, 100.0, 0.0}; // {m, m, m}
+    union Coordinates_3D position2 = asv_positions[1]; // {m, m, m}
     union Coordinates_3D attitude2 {0.0, 0.0, 0.0}; // {rad, rad, rad}
     this->asv2 = asv_new(*asv_spec, this->sea, position2, attitude2);
     asv_set_surge_sway_halt(asv2, is_surge_sway_halt_set);

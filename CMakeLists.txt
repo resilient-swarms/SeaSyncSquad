@@ -10,7 +10,8 @@ include_directories(
 )
 
 set( SOURCE
-        source/main.cpp
+#        source/main.cpp
+#        source/simulation.cpp
         source/radio_attenuation.cpp
         dependency/ASVLite/source/errors.c
         dependency/ASVLite/source/geometry.c
@@ -19,10 +20,10 @@ set( SOURCE
         dependency/ASVLite/source/asv.c
         source/utils.cpp
         source/storm.cpp
-        source/simulation.cpp
         source/netcdf_wave.cpp
         source/netcdf_wind.cpp
         source/netcdf_rain.cpp
+        source/data_generation_swarm_comms.cpp
         # source/simulate_LOS.cpp
         # source/data_generation_waveglider_speed.cpp
         # source/data_generation_radio_attenuation.cpp
