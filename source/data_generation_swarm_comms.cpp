@@ -130,7 +130,7 @@ int main(int argc, char * argv[]){
         std::vector<std::thread*> thread_pool;
         // Spawn threads
         for(int i = jobs_start_index; i < jobs_end_index; ++i) {
-            std::cout<<"["<<i<<" / "<<count_total_scenarios<<"]";
+            std::cout<<"["<<i+1<<" / "<<count_total_scenarios<<"]";
             std::cout<<" distance = "<<distances[i];
             std::cout<<" wave_ht = "<<significant_wave_hts[i];
             std::cout<<"  wind_speed = "<<wind_speeds[i];
@@ -150,14 +150,14 @@ int main(int argc, char * argv[]){
                 // Construct file paths for writing results
                 std::ostringstream oss_ant_ht; // Create a string stream to format the double
                 std::ostringstream oss_wave_ht; // Create a string stream to format the double
-                oss_ant_ht << std::fixed << std::setprecision(1) << ant_ht;
+                oss_ant_ht << std::fixed << std::setprecision(2) << ant_ht;
                 oss_wave_ht << std::fixed << std::setprecision(1) << wave_ht;
-                std::string scenario_name = oss_ant_ht.str() + "_" +
-                                            std::to_string(int(frequency/1'000'000)) + "_" +
-                                                std::to_string(int(distance)) + "_" +
-                                                    std::to_string(int(wind_speed)) + "_" +
-                                                        oss_wave_ht.str() + "_" +
-                                                            std::to_string(int(rainfall_rate));
+                std::string scenario_name = std::to_string(int(distance)) + "_" +
+                                                oss_wave_ht.str() + "_" +
+                                                    std::to_string(int(wind_speed*3.6)) + "_" +
+                                                        std::to_string(int(rainfall_rate)) + "_" +
+                                                            oss_ant_ht.str() + "_" +
+                                                                std::to_string(int(frequency/1'000'000));
                 std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
                 std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
                 // Set deployment locations for the asvs in the swarm
