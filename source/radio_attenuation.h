@@ -46,6 +46,7 @@ public:
     // Results
     double free_space_path_loss; // dB
     std::vector<double> diffraction_loss; // dB
+    std::vector<double> fresnel_clearance; // %
     double diffraction_loss_mean; // dB
     double rain_attenuation; // dB
     double sea_spray_attenuation; // dB
@@ -62,6 +63,12 @@ private:
      * The values returned are a set of points along with the offsets of the points from p1.
      */
     std::vector<std::pair<double, Coordinates_3D>> generate_sea_surface_between_points(const union Coordinates_3D& p1, const union Coordinates_3D& p2, double time);
+
+    /**
+     * Generates the minimum and maximum vertical boundaries of the Fresnel zone for the given points.
+     * The value returned is a vector of pairs of min and max vertical boundaries.
+     */
+    std::vector<std::pair<double, double>> generate_fresnel_zone(std::vector<std::pair<double, Coordinates_3D>>& points);
     double get_diffraction_loss(union Coordinates_3D p1, union Coordinates_3D p2, double time);
 
     struct Sea_surface* sea;

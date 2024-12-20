@@ -102,8 +102,8 @@ int main(int argc, char * argv[]){
     for(double distance : {100.0, 200.0, 400.0, 600.0, 800.0, 1000.0}) { // m
         for(double significant_wave_ht : {0.5, 1.0, 1.5, 2.0, 2.5, 3.0}) { // m
             for(double wind_speed : {50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0}) { // km/hr
-                for(double rainfall_rate : {2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0, 30.0, 40.0, 50.0}) { // mm/hr
-                    for(double antenna_ht : {1.0, 2.0, 3.0, 4.0, 5.0}) { // m
+                for(double rainfall_rate : {2.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0}) { // mm/hr
+                    for(double antenna_ht : {0.05, 0.1, 0.5, 1.0, 2.0, 3.0}) { // m
                         for(double radio_frequency : {868.0, 2400.0, 5200.0}) { // MHz
                             distances.push_back(distance);
                             significant_wave_hts.push_back(significant_wave_ht);
@@ -206,7 +206,7 @@ int main(int argc, char * argv[]){
                     }
                 }
                 std::ofstream comms_result_file(comms_result_file_path); // write results to file
-                comms_result_file << "timestep,x1(m),y1(m),x2(m),y2(m),distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
+                comms_result_file << "time_step,x1(m),y1(m),x2(m),y2(m),distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
                 // Compute attenuation for each pair
                 for (auto& pair : comms_pairs) {
                     Polarisation polarisation = Polarisation::vertical; // Widely used in maritime communications, especially for line-of-sight VHF and UHF radio communication systems, including ship-to-ship and ship-to-shore links.
@@ -225,9 +225,9 @@ int main(int argc, char * argv[]){
                         << result.radio_frequency/1'000'000 << "," // MHz
                         << result.free_space_path_loss << "," // dB
                         << result.diffraction_loss[i] << "," // dB
+                        << result.fresnel_clearance[i] << "," // %
                         << result.rain_attenuation << "," // dB
-                        << result.sea_spray_attenuation << "," // dB
-                        << result.total_attenuation << std::endl; // dB
+                        << result.sea_spray_attenuation << std::endl; // dB
                     }
                 }
                 comms_result_file.close();

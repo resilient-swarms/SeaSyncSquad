@@ -47,38 +47,100 @@ std::vector<std::pair<double, Coordinates_3D>> RadioAttenuation::generate_sea_su
     return std::move(result);
 }
 
+std::vector<std::pair<double, double>> RadioAttenuation::generate_fresnel_zone(std::vector<std::pair<double, Coordinates_3D>>& points)
+{
+    std::vector<std::pair<double, double>> result;
+    // Equation of the first Fresnel zone
+    // r = sqrt(d1*d2/D * c/f)
+    // where:
+    // c = speed of light = 2.997*10^8 (m/s)
+    // d1 and d2 the distance to each antenna (m).
+    // D = total distance (m) = d1 + d2
+    // f = radaio wave frequency (Hz)
+    double c = 2.997 * 100000000;
+    double f = radio_frequency;
+    double x_0 = points[0].second.keys.x;
+    double y_0 = points[0].second.keys.y;
+    double z_0 = points[0].second.keys.z + antenna_height;
+    int n = points.size() - 1;
+    double x_n = points[n].second.keys.x;
+    double y_n = points[n].second.keys.y;
+    double z_n = points[n].second.keys.z + + antenna_height;
+    double D = sqrt((x_n - x_0)*(x_n - x_0) + (y_n - y_0)*(y_n - y_0) + (z_n - z_0)*(z_n - z_0));
+    for(auto& point : points)
+    {
+        double x = point.second.keys.x;
+        double y = point.second.keys.y;
+        double z = point.second.keys.z;
+        double d_1 = sqrt((x - x_0)*(x - x_0) + (y - y_0)*(y - y_0) + (z - z_0)*(z - z_0));
+        double d_2 = sqrt((x_n - x)*(x_n - x) + (y_n - y)*(y_n - y) + (z_n - z)*(z_n - z));
+        double r = sqrt(d_1 * d_2 * c / (D * f));
+        double z_los = z_0 + (d_1/D)*(z_n - z_0);
+        std::pair<double, double> fresnel_limits_at_point = std::make_pair(z_los - r, z_los + r);
+        result.push_back(fresnel_limits_at_point);
+    }
+    return std::move(result);
+}
+
 void RadioAttenuation::set_free_space_path_loss() {
     // Ref: ITU-R P.525-4
-    double f = this->radio_frequency/1'000'000.0; // MHz
-    double d = this->communication_distance/1000.0; // Km
-    this->free_space_path_loss = 32.4 + 20.0*std::log10(f) + 20.0*std::log10(d);
+    double f = radio_frequency/1'000'000.0; // MHz
+    double d = communication_distance/1000.0; // Km
+    free_space_path_loss = 32.4 + 20.0*std::log10(f) + 20.0*std::log10(d);
 }
 
 void RadioAttenuation::set_diffraction_loss() {
     // Ref: ITU-R P.526-15 Section 4.5 and 4.1
-    for(double time = 0; time < this->total_simulation_time; time += this->time_step_size/1000.0) {
+    for(double time = 0; time < total_simulation_time; time += time_step_size/1000.0) {
         // We will use a fixed rudder angle for both ASVs
         double rudder_angle = PI/4; // rad
 
         // Update ASV dynamics
-        wave_glider_compute_dynamics(this->asv1, rudder_angle, this->time_step_size);
-        wave_glider_compute_dynamics(this->asv2, rudder_angle, this->time_step_size);
+        wave_glider_compute_dynamics(asv1, rudder_angle, time_step_size);
+        wave_glider_compute_dynamics(asv2, rudder_angle, time_step_size);
+        union Coordinates_3D p1 = asv_get_position_origin(asv1);
+        union Coordinates_3D p2 = asv_get_position_origin(asv2);
 
-        union Coordinates_3D p1 = asv_get_position_origin(this->asv1);
-        union Coordinates_3D p2 = asv_get_position_origin(this->asv2);
+        // Create sea surface points between the two ASVs
+        std::vector<std::pair<double, Coordinates_3D>>sea_surface_points_and_offsets = generate_sea_surface_between_points(p1, p2, time);
+
+        // Compute the fresnel clearance
+        double min_clearance_current_timestep = 100.0; // % clearance
+        std::vector<std::pair<double, double>> ellipse_z = generate_fresnel_zone(sea_surface_points_and_offsets);
+        for(int i = 0; i < sea_surface_points_and_offsets.size(); ++i)
+        {
+            double z1 = ellipse_z[i].first;
+            double z2 = ellipse_z[i].second;
+            double z0 = sea_surface_points_and_offsets[i].second.keys.z;
+            if(z0 < z1)
+            {
+                // No wave blocking
+            }
+            else if(z0 > z2)
+            {
+                min_clearance_current_timestep = 0.0;
+            }
+            else
+            {
+                double clearance = (z2-z0)/(z2-z1)*100;
+                if(min_clearance_current_timestep > clearance)
+                {
+                    min_clearance_current_timestep = clearance;
+                }
+            }
+        }
+        fresnel_clearance.push_back(min_clearance_current_timestep);
+
+        // Compute diffraction loss
         double R = 6378.0; // Radius of earth in Km
         double Ce = 1/R; // Curvature of earth in Km^-1
         double C = 299'792'458.0; // speed of light in m/s
-        double f = this->radio_frequency; // Hz
+        double f = radio_frequency; // Hz
         double lambda = C/f; // wavelength in m
-        double h_ts = p1.keys.z + this->antenna_height; // height of transmitter in m.
-        double h_rs = p2.keys.z + this->antenna_height; // height of receiver in m.
+        double h_ts = p1.keys.z + antenna_height; // height of transmitter in m.
+        double h_rs = p2.keys.z + antenna_height; // height of receiver in m.
         double d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) + (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y)) / 1000.0; // Total distance between p1 and p2 in Km
         double S_tr = (h_rs - h_ts)/d; // Slope of line from transmitter to receiver in m/Km, Ref ITU-R P.526-15, Section 4.5.1, Eq-49
-
-        // Create equidistant points
-        std::vector<std::pair<double, Coordinates_3D>>sea_surface_points_and_offsets = generate_sea_surface_between_points(p1, p2, time);
-
         std::vector<double> heights; // heights of each intermediate profile point, in m, above LoS
         std::vector<double> d1s;     // distance of each intermediate profile point from transmitter in Km
         std::vector<double> d2s;     // distance of each intermediate profile point to receiver in Km
@@ -106,10 +168,8 @@ void RadioAttenuation::set_diffraction_loss() {
             Srs.push_back(Sr);
             nus.push_back(nu);
         }
-
         // Find the intermediate profile point with the hightest slope.
         double St_max = *std::max_element(Sts.begin(), Sts.end());
-
         // Calculate knife-edge loss for the Bullington point
         auto knife_edge_loss = [](double nu)
         {
@@ -131,12 +191,11 @@ void RadioAttenuation::set_diffraction_loss() {
             double nu_b = (h_ts + St_max*db - (h_ts*(d-db) + h_rs*db)/d) * sqrt((0.002*d)/(lambda*db*(d-db)));
             L_uc = knife_edge_loss(nu_b);
         }
-
         // Calculate Bullington diffraction loss for the path
         double loss = L_uc + (1 - exp(-L_uc/6.0))*(10.0 + 0.02*d); // dB
-        this->diffraction_loss.push_back(loss);
+        diffraction_loss.push_back(loss);
     }
-    this->diffraction_loss_mean = std::accumulate(this->diffraction_loss.begin(), this->diffraction_loss.end(), 0.0)/this->diffraction_loss.size();
+    diffraction_loss_mean = std::accumulate(diffraction_loss.begin(), diffraction_loss.end(), 0.0)/diffraction_loss.size();
 }
 
 void RadioAttenuation::set_rain_attenuation() {
@@ -171,7 +230,7 @@ void RadioAttenuation::set_rain_attenuation() {
         std::array<double, 4> c,
         double M,
         double C)-> double {
-        double f = this->radio_frequency/1000000000.0; // GHz
+        double f = radio_frequency/1000000000.0; // GHz
         double cumulative_term = 0.0;
         for (unsigned int j = 0; j < a.size(); ++j) {
             double A = std::pow((std::log10(f) - b[j])/c[j], 2.0);
@@ -186,7 +245,7 @@ void RadioAttenuation::set_rain_attenuation() {
         std::array<double, 5> c,
         double M,
         double C)-> double {
-        double f = this->radio_frequency/1000000000.0; // GHz
+        double f = radio_frequency/1000000000.0; // GHz
         double cumulative_term = 0.0;
         for (unsigned int j = 0; j < a.size(); ++j) {
             double A = std::pow((std::log10(f) - b[j])/c[j], 2.0);
@@ -197,7 +256,7 @@ void RadioAttenuation::set_rain_attenuation() {
     };
     // Calculate k
     double log10_k = 0.0;
-    if(this->polarisation == Polarisation::horizontal) {
+    if(polarisation == Polarisation::horizontal) {
         log10_k = calc_log10_k(a_k_h, b_k_h, c_k_h, M_k_h, C_k_h);
     } else {
         log10_k = calc_log10_k(a_k_v, b_k_v, c_k_v, M_k_v, C_k_v);
@@ -205,14 +264,14 @@ void RadioAttenuation::set_rain_attenuation() {
     double k = std::pow(10.0, log10_k);
     // Calculate alpha
     double alpha = 0.0;
-    if(this->polarisation == Polarisation::horizontal) {
+    if(polarisation == Polarisation::horizontal) {
         alpha = calc_alpha(a_alpha_h, b_alpha_h, c_alpha_h, M_alpha_h, C_alpha_h);
     } else {
         alpha = calc_alpha(a_alpha_v, b_alpha_v, c_alpha_v, M_alpha_v, C_alpha_v);
     }
     // Rain attenuation
-    double d = this->communication_distance/1000.0; // Km
-    this->rain_attenuation =  d * k * std::pow(this->rainfall_rate, alpha); // dB
+    double d = communication_distance/1000.0; // Km
+    rain_attenuation =  d * k * std::pow(rainfall_rate, alpha); // dB
 }
 
 
@@ -232,17 +291,17 @@ void RadioAttenuation::set_sea_spray_attenuation() {
     // k - mean wavenumber
     // Hs - significant wave height
     // Get mean wavenumber
-    double mean_wavenumber = sea_surface_get_mean_wavenumber(this->sea);
+    double mean_wavenumber = sea_surface_get_mean_wavenumber(sea);
     // Calculate volume flux
-    double s = this->significant_wave_ht * mean_wavenumber / 2.0;
-    double V = this->wind_speed * 1.99 * std::sqrt(s) / std::pow(10, 8); // (m3/s)/(m2)
+    double s = significant_wave_ht * mean_wavenumber / 2.0;
+    double V = wind_speed * 1.99 * std::sqrt(s) / std::pow(10, 8); // (m3/s)/(m2)
     // Calculate mass flux
     double sea_water_density = 1025 * 1000; // g/m3
     double M = V * sea_water_density;
 
     // Part - 2
     // Ref - ITU-R P.840-9
-    double f = this->radio_frequency/1'000'000'000.0; // GHz
+    double f = radio_frequency/1'000'000'000.0; // GHz
     double T = 25.0; // deg C
     T = T + 273.15; // Kelvim
     double epsilon_0 = 77.66 + 103.3 * (300.0/T - 1);
@@ -255,8 +314,8 @@ void RadioAttenuation::set_sea_spray_attenuation() {
     double eta = (2.0 + epsilon_)/epsilon__;
     double K = 0.819*f/(epsilon__*(1 + eta*eta)); // (dB/km)/(g/m3)
     // Calculate total attenuation due to sea water
-    double d = this->communication_distance/1000.0; // Km
-    this->sea_spray_attenuation = K * M * d;
+    double d = communication_distance/1000.0; // Km
+    sea_spray_attenuation = K * M * d;
 }
 
 RadioAttenuation::RadioAttenuation(double antenna_ht, double radio_frequency, Polarisation polarisation, double communication_distance, double significant_wave_ht, double wind_speed, double rainfall_rate) {
@@ -337,6 +396,6 @@ RadioAttenuation::~RadioAttenuation() {
     asv_delete(asv1);
     asv_delete(asv2);
     sea_surface_delete(sea);
-    delete this->asv_spec;
+    delete asv_spec;
 }
 
