@@ -99,10 +99,10 @@ int main(int argc, char * argv[]){
     std::vector<double> rainfall_rates;
     std::vector<double> antenna_hts;
     std::vector<double> radio_frequencies;
-    for(double distance : {100.0, 200.0, 400.0, 600.0, 800.0, 1000.0}) { // m
-        for(double significant_wave_ht : {0.5, 1.0, 1.5, 2.0, 2.5, 3.0}) { // m
-            for(double wind_speed : {50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0}) { // km/hr
-                for(double rainfall_rate : {2.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0}) { // mm/hr
+    for(double distance : {100.0, 400.0, 800.0, 1000.0}) { // m
+        for(double significant_wave_ht : {0.5, 1.0, 1.5, 2.0, 3.0}) { // m
+            for(double wind_speed : {50.0, 100.0}) { // km/hr
+                for(double rainfall_rate : {2.0, 10.0, 20.0, 30.0}) { // mm/hr
                     for(double antenna_ht : {0.05, 0.1, 0.5, 1.0, 2.0, 3.0}) { // m
                         for(double radio_frequency : {868.0, 2400.0, 5200.0}) { // MHz
                             distances.push_back(distance);
