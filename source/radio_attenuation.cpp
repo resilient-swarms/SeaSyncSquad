@@ -77,7 +77,7 @@ void RadioAttenuation::set_diffraction_loss() {
         double S_tr = (h_rs - h_ts)/d; // Slope of line from transmitter to receiver in m/Km, Ref ITU-R P.526-15, Section 4.5.1, Eq-49
 
         // Create equidistant points
-        std::vector<std::pair<double, Coordinates_3D>>offset_sea_point_pairs = generate_sea_surface_between_points(p1, p2, time);
+        std::vector<std::pair<double, Coordinates_3D>>sea_surface_points_and_offsets = generate_sea_surface_between_points(p1, p2, time);
 
         std::vector<double> heights; // heights of each intermediate profile point, in m, above LoS
         std::vector<double> d1s;     // distance of each intermediate profile point from transmitter in Km
@@ -85,10 +85,10 @@ void RadioAttenuation::set_diffraction_loss() {
         std::vector<double> Sts;     // Slopes of each intermediate profile point to transmitter in m/Km
         std::vector<double> Srs;     // Slopes of each intermediate profile point to receiver in m/Km
         std::vector<double> nus;     // diffraction parameters nu
-        int n_intermediate_profile_points = offset_sea_point_pairs.size() - 1;
+        int n_intermediate_profile_points = sea_surface_points_and_offsets.size() - 1;
         for(int i = 1; i < n_intermediate_profile_points; ++i)
         {
-            union Coordinates_3D p = offset_sea_point_pairs[i].second;
+            union Coordinates_3D p = sea_surface_points_and_offsets[i].second;
             // Calculate the Z for LOS at the location of the current point
             double d1 = sqrt((p.keys.x - p1.keys.x)*(p.keys.x - p1.keys.x) +
                              (p.keys.y - p1.keys.y)*(p.keys.y - p1.keys.y)) / 1000.0; // Km
