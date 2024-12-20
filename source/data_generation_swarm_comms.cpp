@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <future>
@@ -11,13 +12,13 @@
 #include <numeric>
 
 
-std::vector<std::vector<Coordinates_3D>> set_deployment_locations(const Geo_coordinate& deployment_region_centroid, double asv_spacing) {
+std::vector<std::vector<Coordinates_3D>> generate_deployment_locations(const Geo_coordinate& deployment_region_centroid, double asv_spacing, std::ofstream& file) {
     // Initialise deployment coordinates
     // Deployment pattern - hexagonal.
     //  O   O   O       <-- North row
     //    0   0   0     <-- Mid row
     //      0   0   0   <-- South row
-    Geo_coordinate_converter geo_coordinate_converter;
+    Geo_coordinate_converter geo_coordinate_converter(deployment_region_centroid);
     Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
     std::vector<std::vector<Coordinates_3D>> deployment_locations;
 
@@ -35,6 +36,9 @@ std::vector<std::vector<Coordinates_3D>> set_deployment_locations(const Geo_coor
     north_row.push_back(north_row_west);
     north_row.push_back(north_row_mid);
     north_row.push_back(north_row_east);
+    file << "(" << north_row_west.keys.x << " " << north_row_west.keys.y << "),";
+    file << "(" << north_row_mid.keys.x  << " " << north_row_mid.keys.y  << "),";
+    file << "(" << north_row_east.keys.x << " " << north_row_east.keys.y << ")" << std::endl;
     // Mid row
     std::vector<Coordinates_3D> mid_row;
     Coordinates_3D mid_row_mid = region_centroid;
@@ -47,6 +51,9 @@ std::vector<std::vector<Coordinates_3D>> set_deployment_locations(const Geo_coor
     mid_row.push_back(mid_row_west);
     mid_row.push_back(mid_row_mid);
     mid_row.push_back(mid_row_east);
+    file << "(" << mid_row_west.keys.x << " " << mid_row_west.keys.y << "),";
+    file << "(" << mid_row_mid.keys.x  << " " << mid_row_mid.keys.y  << "),";
+    file << "(" << mid_row_east.keys.x << " " << mid_row_east.keys.y << ")" << std::endl;
     // South row
     std::vector<Coordinates_3D> south_row;
     Coordinates_3D south_row_mid = {region_centroid.keys.x + asv_spacing * std::cos(PI/3),
@@ -61,6 +68,9 @@ std::vector<std::vector<Coordinates_3D>> set_deployment_locations(const Geo_coor
     south_row.push_back(south_row_west);
     south_row.push_back(south_row_mid);
     south_row.push_back(south_row_east);
+    file << "(" << south_row_west.keys.x << " " << south_row_west.keys.y << "),";
+    file << "(" << south_row_mid.keys.x  << " " << south_row_mid.keys.y  << "),";
+    file << "(" << south_row_east.keys.x << " " << south_row_east.keys.y << ")" << std::endl;
 
     deployment_locations.push_back(north_row);
     deployment_locations.push_back(mid_row);
@@ -134,18 +144,26 @@ int main(int argc, char * argv[]){
             double wave_ht = significant_wave_hts[i]; // m
             double rainfall_rate = rainfall_rates[i]; // mm/hr
 
-            std::string file_name = std::to_string(int(ant_ht)) + "_" +
-                                        std::to_string(int(frequency/1'000'000)) + "_" +
-                                            std::to_string(int(distance)) + "_" +
-                                                std::to_string(int(wind_speed)) + "_" +
-                                                    std::to_string(wave_ht) + "_" +
-                                                        std::to_string(int(rainfall_rate)) + ".csv";
-            std::filesystem::path result_file = results_dir/file_name;
-
-            auto thread_worker_function = [](double ant_ht, double frequency, double distance, double wind_speed, double wave_ht, double rainfall_rate, std::filesystem::path result_file) {
+            auto thread_worker_function = [](double ant_ht, double frequency, double distance, double wind_speed, double wave_ht, double rainfall_rate, std::filesystem::path results_dir) {
+                // Set the centroid of the deployment
                 Geo_coordinate deployment_region_centroid {.longitude = -83.5, .latitude = 19.0}; // Deployment coordinates
+                // Construct file paths for writing results
+                std::ostringstream oss_ant_ht; // Create a string stream to format the double
+                std::ostringstream oss_wave_ht; // Create a string stream to format the double
+                oss_ant_ht << std::fixed << std::setprecision(1) << ant_ht;
+                oss_wave_ht << std::fixed << std::setprecision(1) << wave_ht;
+                std::string scenario_name = oss_ant_ht.str() + "_" +
+                                            std::to_string(int(frequency/1'000'000)) + "_" +
+                                                std::to_string(int(distance)) + "_" +
+                                                    std::to_string(int(wind_speed)) + "_" +
+                                                        oss_wave_ht.str() + "_" +
+                                                            std::to_string(int(rainfall_rate));
+                std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
+                std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
                 // Set deployment locations for the asvs in the swarm
-                std::vector<std::vector<Coordinates_3D>> deployment_locations = set_deployment_locations(deployment_region_centroid, distance);
+                std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
+                std::vector<std::vector<Coordinates_3D>> deployment_locations = generate_deployment_locations(deployment_region_centroid, distance, deployment_file);
+                deployment_file.close();
                 // Create ASV pairs for assessing comms.
                 std::vector<std::pair<Coordinates_3D, Coordinates_3D>> comms_pairs;
                 //  O -- O -- O       <-- North row
@@ -187,14 +205,14 @@ int main(int argc, char * argv[]){
                         comms_pairs.push_back(comms_pair);
                     }
                 }
-                std::ofstream file(result_file); // write results to file
-                file << "timestep,x1(m),y1(m),x2(m),y2(m),distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
+                std::ofstream comms_result_file(comms_result_file_path); // write results to file
+                comms_result_file << "timestep,x1(m),y1(m),x2(m),y2(m),distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),rain_attenuation(dB),sea_spray_attenuation(dB),total_loss(dB)" << std::endl;
                 // Compute attenuation for each pair
                 for (auto& pair : comms_pairs) {
                     Polarisation polarisation = Polarisation::vertical; // Widely used in maritime communications, especially for line-of-sight VHF and UHF radio communication systems, including ship-to-ship and ship-to-shore links.
                     RadioAttenuation result(ant_ht, frequency, polarisation, pair, wave_ht, wind_speed, rainfall_rate);
                     for(int i = 0; i < result.diffraction_loss.size(); ++i) {
-                        file << i << ","
+                        comms_result_file << i << ","
                         << pair.first.keys.x << "," // m
                         << pair.first.keys.y << "," // m
                         << pair.second.keys.x << "," // m
@@ -212,10 +230,10 @@ int main(int argc, char * argv[]){
                         << result.total_attenuation << std::endl; // dB
                     }
                 }
-                file.close();
+                comms_result_file.close();
             };
 
-            std::thread* thread_object = new std::thread(thread_worker_function, ant_ht, frequency, distance, wind_speed, wave_ht, rainfall_rate, result_file);
+            std::thread* thread_object = new std::thread(thread_worker_function, ant_ht, frequency, distance, wind_speed, wave_ht, rainfall_rate, results_dir);
             thread_pool.push_back(thread_object);
         }
         // Join the threads
@@ -235,4 +253,5 @@ int main(int argc, char * argv[]){
 
 
 // TODO:
+// Use only fresnel zone
 // Adjust formulas to take sub GHz frequencies.

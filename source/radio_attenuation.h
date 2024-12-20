@@ -56,11 +56,12 @@ private:
     void set_diffraction_loss();
     void set_rain_attenuation();
     void set_sea_spray_attenuation();
-    void create_equidistant_points(const union Coordinates_3D& p1,
-                                   const union Coordinates_3D& p2,
-                                   double time,
-                                   std::vector<union Coordinates_3D>& points,
-                                   std::vector<double>& offsets);
+
+    /**
+     * Generates a set of equidistant points representing a sea surface between two given points.
+     * The values returned are a set of points along with the offsets of the points from p1.
+     */
+    std::vector<std::pair<double, Coordinates_3D>> generate_sea_surface_between_points(const union Coordinates_3D& p1, const union Coordinates_3D& p2, double time);
     double get_diffraction_loss(union Coordinates_3D p1, union Coordinates_3D p2, double time);
 
     struct Sea_surface* sea;
