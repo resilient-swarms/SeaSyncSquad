@@ -206,7 +206,7 @@ int main(int argc, char * argv[]){
                     }
                 }
                 std::ofstream comms_result_file(comms_result_file_path); // write results to file
-                comms_result_file << "time_step,x1(m),y1(m),x2(m),y2(m),distance(km),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
+                comms_result_file << "time_step,x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
                 // Compute attenuation for each pair
                 for (auto& pair : comms_pairs) {
                     Polarisation polarisation = Polarisation::vertical; // Widely used in maritime communications, especially for line-of-sight VHF and UHF radio communication systems, including ship-to-ship and ship-to-shore links.
