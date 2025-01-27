@@ -46,36 +46,36 @@ def analyse_graph(distance, significant_wave_ht, wind_speed, rainfall_rate, ante
     df_comms_result["(x2,y2)"] = list(zip(df_comms_result["x2(m)"], df_comms_result["y2(m)"]))
     # Group by connection pairs
     df_comms_result = df_comms_result.groupby(["(x1,y1)", "(x2,y2)"])
+    # Init graph
+    graph = nx.Graph()
     # Create nodes and edges in graph
+    for name, group in df_comms_result:
+        group = group.reset_index()
+        node1, node2 = name
+        x1, y1 = node1
+        x2, y2 = node2
+        graph.add_node(node1, x=x1, y=y1)
+        graph.add_node(node2, x=x2, y=y2)
+        graph.add_edge(node1, node2,
+                       distance = group["distance(m)"].mean(),
+                       diff_loss = group["diffraction_loss(dB)"],
+                       fresnel_clearance = group["fresnel_clearance(%)"].to_list(),
+                       total_loss = (group["free_space_path_loss(dB)"] +
+                                     group["diffraction_loss(dB)"] +
+                                     group["rain_attenuation(dB)"] +
+                                     group["sea_spray_attenuation(dB)"]).to_list())
     for i in range(total_simulation_steps):
-        # Init graph
-        graph = nx.Graph()
-        for name, group in df_comms_result:
-            group = group.reset_index()
-            node1, node2 = name
-            x1, y1 = node1
-            x2, y2 = node2
-            graph.add_node(node1, x=x1, y=y1)
-            graph.add_node(node2, x=x2, y=y2)
-            graph.add_edge(node1, node2,
-                           distance = group["distance(m)"].mean(),
-                           diff_loss = group["diffraction_loss(dB)"][i],
-                           fresnel_clearance = group["fresnel_clearance(%)"][i],
-                           total_loss = group["free_space_path_loss(dB)"][i] +
-                                        group["diffraction_loss(dB)"][i] +
-                                        group["rain_attenuation(dB)"][i] +
-                                        group["sea_spray_attenuation(dB)"][i])
-        fresnel_clearances = [edge['fresnel_clearance'] for _, _, edge in graph.edges(data=True)]
+        fresnel_clearances = [edge['fresnel_clearance'][i] for _, _, edge in graph.edges(data=True)]
         avg_fresnel_clearance = sum(fresnel_clearances) / len(fresnel_clearances)
         avg_fresnel_clearances.append(avg_fresnel_clearance)
         min_fresnel_clearance = min(fresnel_clearances)
         min_fresnel_clearances.append(min_fresnel_clearance)
-        diff_losses = [edge['diff_loss'] for _, _, edge in graph.edges(data=True)]
+        diff_losses = [edge['diff_loss'][i] for _, _, edge in graph.edges(data=True)]
         avg_diff_loss = sum(diff_losses) / len(diff_losses)
         avg_diff_losses.append(avg_diff_loss)
         min_diff_loss = min(diff_losses)
         min_diff_losses.append(min_diff_loss)
-        total_losses = [edge['total_loss'] for _, _, edge in graph.edges(data=True)]
+        total_losses = [edge['total_loss'][i] for _, _, edge in graph.edges(data=True)]
         avg_total_loss = sum(total_losses) / len(total_losses)
         avg_total_losses.append(avg_total_loss)
         min_total_loss = min(total_losses)
