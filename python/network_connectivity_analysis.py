@@ -162,8 +162,8 @@ else:
                                "min_fresnel_clearance",
                                "avg_diff_loss",
                                "min_diff_loss",
-                               "total_loss",
-                               "min_total_loss,"
+                               "avg_total_loss",
+                               "min_total_loss",
                                "edge_connectivity",
                                "num_sub_graphs",
                                "clustering_coefficient"])
@@ -204,7 +204,7 @@ for i in range(num_rows):
         lineplt1 = sns.lineplot(
             data=data, x="sig_wave_ht(m)", y="edge_connectivity",
             linestyle="--", marker="o", hue="radio_freq(Hz)",
-            estimator="mean", errorbar="ci", err_kws={"alpha": 0.1}, ax=axes[i][j]
+            estimator="median", errorbar="se", err_kws={"alpha": 0.1}, ax=axes[i][j]
         )
         axes[i][j].set(xlabel=None, ylabel=None)
         handles, labels = axes[i][j].get_legend_handles_labels()
@@ -273,7 +273,7 @@ for i in range(num_rows):
         lineplt1 = sns.lineplot(
             data=data, x="sig_wave_ht(m)", y="num_sub_graphs",
             linestyle="--", marker="o", hue="radio_freq(Hz)",
-            estimator="mean", errorbar="ci", err_kws={"alpha": 0.1}, ax=axes[i][j]
+            estimator="median", errorbar="se", err_kws={"alpha": 0.1}, ax=axes[i][j]
         )
         axes[i][j].set(xlabel=None, ylabel=None)
         handles, labels = axes[i][j].get_legend_handles_labels()
@@ -341,12 +341,12 @@ for i in range(num_rows):
         lineplt1 = sns.lineplot(
             data=data, x="sig_wave_ht(m)", y="min_fresnel_clearance",
             linestyle=":", marker="o", hue="radio_freq(Hz)",
-            estimator="mean", errorbar="ci", err_kws={"alpha": 0.1}, ax=axes[i][j]
+            estimator="mean", errorbar="pi", err_kws={"alpha": 0.1}, ax=axes[i][j]
         )
         lineplt2 = sns.lineplot(
             data=data, x="sig_wave_ht(m)", y="avg_fresnel_clearance",
             linestyle="--", marker="s", hue="radio_freq(Hz)",
-            estimator="mean", errorbar="ci", err_kws={"alpha": 0.1}, ax=axes[i][j]
+            estimator="mean", errorbar="pi", err_kws={"alpha": 0.1}, ax=axes[i][j]
         )
         axes[i][j].set(xlabel=None, ylabel=None)
         handles, labels = axes[i][j].get_legend_handles_labels()
