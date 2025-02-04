@@ -159,7 +159,6 @@ int main() {
                                                         std::to_string(int(rainfall_rate)) + "_" +
                                                             oss_ant_ht.str() + "_" +
                                                                 std::to_string(int(frequency/1'000'000));
-                std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
                 std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
                 // Initialise the sea surface
                 double wave_dp = PI/3.0; // rad
@@ -202,7 +201,7 @@ int main() {
                         swarm_asvs.push_back(asv);
                     }
                 }
-                Swarm swarm(swarm_asvs, sea_surface, ant_ht, frequency, rainfall_rate, wind_speed, comms_result_file_path);
+                Swarm swarm(swarm_asvs, sea_surface, ant_ht, frequency, rainfall_rate, wind_speed, results_dir, scenario_name);
                 // Create ASV pairs for assessing comms.
                 //  O -- O -- O       <-- North row
                 //

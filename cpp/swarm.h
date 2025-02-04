@@ -20,7 +20,6 @@ struct EdgeProperties {
     double rain_attenuation; // dB
     double sea_spray_attenuation; // dB
     double total_attenuation; // dB
-    double normalised_attenuation; // free_space_path_loss/total_attenuation
     double fresnel_clearance; // %
 };
 
@@ -29,7 +28,7 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 
 class Swarm {
 public:
-    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path comms_result_file_path);
+    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name);
     void set_comms_link(std::pair<Asv*, Asv*> comms_link);
     void run_simulation();
 
@@ -42,7 +41,8 @@ private:
     double wind_speed; // m/s
     Sea_surface* sea_surface;
     Graph graph;
-    std::filesystem::path comms_result_file_path;
+    std::string scenario_name;
+    std::filesystem::path results_dir;
 };
 
 

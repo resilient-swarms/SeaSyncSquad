@@ -7,19 +7,34 @@
 #include <boost/graph/stoer_wagner_min_cut.hpp>
 #include <boost/graph/connected_components.hpp>
 #include <boost/property_map/property_map.hpp>
+#include <boost/graph/filtered_graph.hpp>
+#include <boost/graph/graph_utility.hpp>
+#include <boost/graph/copy.hpp>
 extern "C" {
 #include "constants.h"
 }
 
 
+struct EdgeFilter {
+    const Graph* g = nullptr;  // Initialize to nullptr
+    EdgeFilter() = default;  // Default constructor
+    EdgeFilter(const Graph& graph) : g(&graph) {}
 
-Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path comms_result_file_path) {
+    bool operator()(const Graph::edge_descriptor& e) const {
+        // Add null check for safety
+        return g && (*g)[e].fresnel_clearance >= 40.0;
+    }
+};
+
+
+Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name) {
     this->sea_surface = sea_surface;
     this->antenna_height = antenna_height;
     this->radio_frequency = radio_frequency;
     this->rainfall_rate = rainfall_rate;
     this->wind_speed = wind_speed;
-    this->comms_result_file_path = comms_result_file_path;
+    this->results_dir = results_dir;
+    this->scenario_name = scenario_name;
     for (auto asv : asvs) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
         graph[v].asv = asv;
@@ -46,9 +61,13 @@ void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
 }
 
 void Swarm::run_simulation() {
-    // Open file to wirte simulation results
+    // Open files to write simulation results
+    std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
+    std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
     std::ofstream comms_result_file(comms_result_file_path); // write results to file
-    comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
+    std::ofstream graph_result_file(graph_result_file_path); // write results to file
+    // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
+    graph_result_file << "time(sec),avg_edge_dist(m),min_edge_dist(m),avg_fresnel_clr(%),min_fresnel_clr(%),avg_diffraction_loss(dB),max_diffraction_loss(dB),avg_total_loss(dB),max_total_loss(dB),num_components,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
@@ -107,27 +126,23 @@ void Swarm::run_simulation() {
             double total_loss = free_space_path_loss + rain_attenuation + sea_spray_attenuation + graph[edge].diffraction_loss;
             graph[edge].total_attenuation = total_loss;
             edge_total_losses.push_back(total_loss);
-            // Normalised attenuation
-            double normalised_attenuation = free_space_path_loss / total_loss;
-            graph[edge].normalised_attenuation = normalised_attenuation;
-            edge_normalised_losses.push_back(normalised_attenuation);
             // Write results to file
-            comms_result_file << time << ","
-                        << x1 << "," // m
-                        << y1 << "," // m
-                        << x2 << "," // m
-                        << y2 << "," // m
-                        << d << "," // m
-                        << sea_surface_get_significant_height(sea_surface) << "," // m
-                        << wind_speed*3.6 << "," // km/hr
-                        << rainfall_rate << "," // mm/hr
-                        << antenna_height << "," // m
-                        << radio_frequency/1'000'000 << "," // MHz
-                        << graph[edge].free_space_path_loss << "," // dB
-                        << graph[edge].diffraction_loss << "," // dB
-                        << graph[edge].fresnel_clearance << "," // %
-                        << graph[edge].rain_attenuation << "," // dB
-                        << graph[edge].sea_spray_attenuation << std::endl; // dB
+            // comms_result_file << time << ","
+            //             << x1 << "," // m
+            //             << y1 << "," // m
+            //             << x2 << "," // m
+            //             << y2 << "," // m
+            //             << d << "," // m
+            //             << sea_surface_get_significant_height(sea_surface) << "," // m
+            //             << wind_speed*3.6 << "," // km/hr
+            //             << rainfall_rate << "," // mm/hr
+            //             << antenna_height << "," // m
+            //             << radio_frequency/1'000'000 << "," // MHz
+            //             << graph[edge].free_space_path_loss << "," // dB
+            //             << graph[edge].diffraction_loss << "," // dB
+            //             << graph[edge].fresnel_clearance << "," // %
+            //             << graph[edge].rain_attenuation << "," // dB
+            //             << graph[edge].sea_spray_attenuation << std::endl; // dB
         }
         // Quantify graph connectivity
         double avg_edge_distance = std::accumulate(edge_distances.begin(), edge_distances.end(), 0.0) / edge_distances.size();
@@ -135,17 +150,32 @@ void Swarm::run_simulation() {
         double avg_fresnel_clearance = std::accumulate(edge_fresnel_clearances.begin(), edge_fresnel_clearances.end(), 0.0) / edge_fresnel_clearances.size();
         double min_fresnel_clearance = *std::min_element(edge_fresnel_clearances.begin(), edge_fresnel_clearances.end());
         double avg_diffraction_loss = std::accumulate(edge_diffraction_losses.begin(), edge_diffraction_losses.end(), 0.0) / edge_diffraction_losses.size();
-        double min_diffraction_loss = *std::min_element(edge_diffraction_losses.begin(), edge_diffraction_losses.end());
+        double max_diffraction_loss = *std::max_element(edge_diffraction_losses.begin(), edge_diffraction_losses.end());
         double avg_total_loss = std::accumulate(edge_total_losses.begin(), edge_total_losses.end(), 0.0) / edge_total_losses.size();
-        double min_total_loss = *std::min_element(edge_total_losses.begin(), edge_total_losses.end());
-        double avg_normalised_attenuation = std::accumulate(edge_normalised_losses.begin(), edge_normalised_losses.end(), 0.0) / edge_normalised_losses.size();
-        double min_normalised_attenuation = *std::min_element(edge_normalised_losses.begin(), edge_normalised_losses.end());
+        double max_total_loss = *std::max_element(edge_total_losses.begin(), edge_total_losses.end());
         // Calculate number of connected components
         // If num_components == 1, the graph is fully connected.
         // If num_components > 1, the graph is NOT fully connected.
-        std::vector<int> component(boost::num_vertices(graph));
-        int num_components = boost::connected_components(graph, &component[0]);
-        double num_components_inverse = 1.0/num_components; // 1 means graph is fully connected else will have a value less than 1.
+        // Create filtered graph
+        EdgeFilter filter(graph);
+        boost::filtered_graph<Graph, EdgeFilter> filtered(graph, filter);
+        // Calculate connected components
+        std::vector<int> components(boost::num_vertices(graph));
+        int num_components = boost::connected_components(filtered, components.data());
+        // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
+        double spatial_connectivity_index = avg_edge_distance - avg_total_loss - num_components;
+        // Write results to file
+        graph_result_file << time << ","
+                    << avg_edge_distance << "," // m
+                    << min_edge_distance << "," // m
+                    << avg_fresnel_clearance << "," // %
+                    << min_fresnel_clearance << "," // %
+                    << avg_diffraction_loss << "," // dB
+                    << max_diffraction_loss << "," // dB
+                    << avg_total_loss << "," // dB
+                    << max_total_loss << "," // dB
+                    << num_components << ","
+                    << spatial_connectivity_index << std::endl;
     }
     comms_result_file.close();
 }
