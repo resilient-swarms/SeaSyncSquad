@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.30)
 project(SeaSyncSquad)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -10,28 +10,25 @@ include_directories(
 )
 
 set( SOURCE
-#        source/main.cpp
-#        source/simulation.cpp
-        source/radio_attenuation.cpp
+        cpp/main.cpp
+        cpp/swarm.cpp
+        cpp/radio_attenuation.cpp
+        cpp/netcdf_rain.cpp
+        cpp/netcdf_wave.cpp
+        cpp/netcdf_wind.cpp
+        cpp/storm.cpp
+        cpp/utils.cpp
         dependency/ASVLite/source/errors.c
         dependency/ASVLite/source/geometry.c
         dependency/ASVLite/source/regular_wave.c
         dependency/ASVLite/source/sea_surface.c
         dependency/ASVLite/source/asv.c
-        source/utils.cpp
-        source/storm.cpp
-        source/netcdf_wave.cpp
-        source/netcdf_wind.cpp
-        source/netcdf_rain.cpp
-        source/data_generation_swarm_comms.cpp
-        # source/simulate_LOS.cpp
-        # source/data_generation_waveglider_speed.cpp
-        # source/data_generation_radio_attenuation.cpp
+
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
 
-#add_subdirectory(dependency/matplotlib-cpp)
+add_subdirectory(dependency/matplotlib-cpp)
 add_subdirectory(dependency/netcdf-cxx4)
 
 find_package(Threads REQUIRED)

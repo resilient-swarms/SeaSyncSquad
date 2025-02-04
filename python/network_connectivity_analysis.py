@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 module_dir = pathlib.Path(__file__).parent.resolve()
 root_dir = module_dir.parent
 result_dir = root_dir.joinpath('results_swarm_comms')
-graph_dir = root_dir.joinpath('graphs')
+graph_dir = root_dir.joinpath('results_graph_analysis')
 
 
 # Inputs
