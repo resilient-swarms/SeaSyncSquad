@@ -64,7 +64,7 @@ void Swarm::run_simulation() {
     // Open files to write simulation results
     std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
     std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
-    std::ofstream comms_result_file(comms_result_file_path); // write results to file
+    // std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
     // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
     graph_result_file << "time(sec),avg_edge_dist(m),min_edge_dist(m),avg_fresnel_clr(%),min_fresnel_clr(%),avg_diffraction_loss(dB),max_diffraction_loss(dB),avg_total_loss(dB),max_total_loss(dB),num_components,spatial_connectivity_index" << std::endl;
@@ -177,6 +177,7 @@ void Swarm::run_simulation() {
                     << num_components << ","
                     << spatial_connectivity_index << std::endl;
     }
-    comms_result_file.close();
+    // comms_result_file.close();
+    graph_result_file.close();
 }
 
