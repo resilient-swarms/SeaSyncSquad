@@ -5,6 +5,8 @@
 #include <numeric>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/stoer_wagner_min_cut.hpp>
+#include <boost/graph/connected_components.hpp>
+#include <boost/property_map/property_map.hpp>
 extern "C" {
 #include "constants.h"
 }
@@ -61,9 +63,11 @@ void Swarm::run_simulation() {
         }
 
         // For each edge of the graph, compute the radio attenuation
+        std::vector<double> edge_distances;
         std::vector<double> edge_fresnel_clearances;
         std::vector<double> edge_diffraction_losses;
         std::vector<double> edge_total_losses;
+        std::vector<double> edge_normalised_losses;
         for (auto edge : boost::make_iterator_range(boost::edges(graph))) {
             // Get edge vertices
             Graph::vertex_descriptor v1 = boost::source(edge, graph);
@@ -81,6 +85,7 @@ void Swarm::run_simulation() {
             double y2 = p2.keys.y;
             double d = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
             graph[edge].distance = d;
+            edge_distances.push_back(d);
             // Calculate free space path loss
             double free_space_path_loss = get_free_space_path_loss(radio_frequency, d);
             graph[edge].free_space_path_loss = free_space_path_loss;
@@ -102,6 +107,10 @@ void Swarm::run_simulation() {
             double total_loss = free_space_path_loss + rain_attenuation + sea_spray_attenuation + graph[edge].diffraction_loss;
             graph[edge].total_attenuation = total_loss;
             edge_total_losses.push_back(total_loss);
+            // Normalised attenuation
+            double normalised_attenuation = free_space_path_loss / total_loss;
+            graph[edge].normalised_attenuation = normalised_attenuation;
+            edge_normalised_losses.push_back(normalised_attenuation);
             // Write results to file
             comms_result_file << time << ","
                         << x1 << "," // m
@@ -121,13 +130,22 @@ void Swarm::run_simulation() {
                         << graph[edge].sea_spray_attenuation << std::endl; // dB
         }
         // Quantify graph connectivity
-        // TODO: create subgraph for fresnel clearance <= 20%.
+        double avg_edge_distance = std::accumulate(edge_distances.begin(), edge_distances.end(), 0.0) / edge_distances.size();
+        double min_edge_distance = *std::min_element(edge_distances.begin(), edge_distances.end());
         double avg_fresnel_clearance = std::accumulate(edge_fresnel_clearances.begin(), edge_fresnel_clearances.end(), 0.0) / edge_fresnel_clearances.size();
         double min_fresnel_clearance = *std::min_element(edge_fresnel_clearances.begin(), edge_fresnel_clearances.end());
         double avg_diffraction_loss = std::accumulate(edge_diffraction_losses.begin(), edge_diffraction_losses.end(), 0.0) / edge_diffraction_losses.size();
         double min_diffraction_loss = *std::min_element(edge_diffraction_losses.begin(), edge_diffraction_losses.end());
         double avg_total_loss = std::accumulate(edge_total_losses.begin(), edge_total_losses.end(), 0.0) / edge_total_losses.size();
         double min_total_loss = *std::min_element(edge_total_losses.begin(), edge_total_losses.end());
+        double avg_normalised_attenuation = std::accumulate(edge_normalised_losses.begin(), edge_normalised_losses.end(), 0.0) / edge_normalised_losses.size();
+        double min_normalised_attenuation = *std::min_element(edge_normalised_losses.begin(), edge_normalised_losses.end());
+        // Calculate number of connected components
+        // If num_components == 1, the graph is fully connected.
+        // If num_components > 1, the graph is NOT fully connected.
+        std::vector<int> component(boost::num_vertices(graph));
+        int num_components = boost::connected_components(graph, &component[0]);
+        double num_components_inverse = 1.0/num_components; // 1 means graph is fully connected else will have a value less than 1.
     }
     comms_result_file.close();
 }

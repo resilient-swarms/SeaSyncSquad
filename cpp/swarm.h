@@ -20,6 +20,7 @@ struct EdgeProperties {
     double rain_attenuation; // dB
     double sea_spray_attenuation; // dB
     double total_attenuation; // dB
+    double normalised_attenuation; // free_space_path_loss/total_attenuation
     double fresnel_clearance; // %
 };
 
