@@ -11,6 +11,7 @@ extern "C" {
 
 struct VertexProperties {
     Asv* asv;
+    double radio_attenuation_threshold; // dB
 };
 
 struct EdgeProperties {
@@ -28,7 +29,7 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 
 class Swarm {
 public:
-    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name);
+    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name);
     void set_comms_link(std::pair<Asv*, Asv*> comms_link);
     void run_simulation();
     std::vector<Asv*> get_asvs();
@@ -36,6 +37,8 @@ public:
 private:
     double simulation_time = 15.0 * 60.0; // seconds
     double simulation_time_step_size = 40.0; // milli-sec
+    double radio_attenuation_threshold; // dB
+    double distance; // m
     double antenna_height; // m
     double radio_frequency; // Hz
     double rainfall_rate; // mm/hr
