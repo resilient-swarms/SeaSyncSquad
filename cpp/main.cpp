@@ -14,7 +14,7 @@ extern "C" {
 #include "constants.h"
 }
 
-std::vector<Coordinates_3D> get_fomation_hex(Geo_coordinate& deployment_region_centroid, double asv_spacing, std::filesystem::path& deployment_file_path) {
+std::vector<Coordinates_3D> get_fomation_hex(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - hexagonal.
     //  O   O   O       <-- North row
@@ -62,24 +62,11 @@ std::vector<Coordinates_3D> get_fomation_hex(Geo_coordinate& deployment_region_c
     deployment_locations.push_back(south_row_mid);
     deployment_locations.push_back(south_row_east);
 
-    // Write deployment locations to file
-    std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
-    deployment_file << "(" << north_row_west.keys.x << " " << north_row_west.keys.y << "),";
-    deployment_file << "(" << north_row_mid.keys.x  << " " << north_row_mid.keys.y  << "),";
-    deployment_file << "(" << north_row_east.keys.x << " " << north_row_east.keys.y << ")" << std::endl;
-    deployment_file << "(" << mid_row_west.keys.x << " " << mid_row_west.keys.y << "),";
-    deployment_file << "(" << mid_row_mid.keys.x  << " " << mid_row_mid.keys.y  << "),";
-    deployment_file << "(" << mid_row_east.keys.x << " " << mid_row_east.keys.y << ")" << std::endl;
-    deployment_file << "(" << south_row_west.keys.x << " " << south_row_west.keys.y << "),";
-    deployment_file << "(" << south_row_mid.keys.x  << " " << south_row_mid.keys.y  << "),";
-    deployment_file << "(" << south_row_east.keys.x << " " << south_row_east.keys.y << ")" << std::endl;
-    deployment_file.close();
-
     return deployment_locations;
 }
 
 
-std::vector<Coordinates_3D> get_fomation_squ(Geo_coordinate& deployment_region_centroid, double asv_spacing, std::filesystem::path& deployment_file_path) {
+std::vector<Coordinates_3D> get_fomation_squ(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - square.
     //  O   O   O   <-- North row
@@ -127,24 +114,11 @@ std::vector<Coordinates_3D> get_fomation_squ(Geo_coordinate& deployment_region_c
     deployment_locations.push_back(south_row_mid);
     deployment_locations.push_back(south_row_east);
 
-    // Write deployment locations to file
-    std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
-    deployment_file << "(" << north_row_west.keys.x << " " << north_row_west.keys.y << "),";
-    deployment_file << "(" << north_row_mid.keys.x  << " " << north_row_mid.keys.y  << "),";
-    deployment_file << "(" << north_row_east.keys.x << " " << north_row_east.keys.y << ")" << std::endl;
-    deployment_file << "(" << mid_row_west.keys.x << " " << mid_row_west.keys.y << "),";
-    deployment_file << "(" << mid_row_mid.keys.x  << " " << mid_row_mid.keys.y  << "),";
-    deployment_file << "(" << mid_row_east.keys.x << " " << mid_row_east.keys.y << ")" << std::endl;
-    deployment_file << "(" << south_row_west.keys.x << " " << south_row_west.keys.y << "),";
-    deployment_file << "(" << south_row_mid.keys.x  << " " << south_row_mid.keys.y  << "),";
-    deployment_file << "(" << south_row_east.keys.x << " " << south_row_east.keys.y << ")" << std::endl;
-    deployment_file.close();
-
     return deployment_locations;
 }
 
 
-std::vector<Coordinates_3D> get_fomation_line(Geo_coordinate& deployment_region_centroid, double asv_spacing, std::filesystem::path& deployment_file_path) {
+std::vector<Coordinates_3D> get_fomation_line(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - line.
     //  O   O   O   0   [0]   0   0   0   0
@@ -152,20 +126,12 @@ std::vector<Coordinates_3D> get_fomation_line(Geo_coordinate& deployment_region_
     Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
     Coordinates_3D leftmost = {region_centroid.keys.x - 4 * asv_spacing, region_centroid.keys.y, 0};
     std::vector<Coordinates_3D> deployment_locations;
-    // Write deployment locations to file
-    std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
-    for (int i = 0; i < 9 ; ++i) {
-        Coordinates_3D new_position = {leftmost.keys.x + (i*asv_spacing), region_centroid.keys.y, 0};
-        deployment_locations.push_back(new_position);
-        deployment_file << "(" << new_position.keys.x << " " << new_position.keys.y << "),";
-    }
-    deployment_file.close();
 
     return deployment_locations;
 }
 
 
-std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_region_centroid, double asv_spacing, std::filesystem::path& deployment_file_path) {
+std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - nonagon.
     //    0  -  0
@@ -180,18 +146,6 @@ std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_regio
     Geo_coordinate_converter geo_coordinate_converter(deployment_region_centroid);
     Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
     std::vector<Coordinates_3D> deployment_locations;
-    // Write deployment locations to file
-    std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
-    for (int i = 0; i < 9 ; ++i) {
-        double angle = i*(2.0*PI)/9;
-        double circumradius = asv_spacing / (2 * std::sin(PI / 9));
-        double x = region_centroid.keys.x + (circumradius * std::cos(angle));
-        double y = region_centroid.keys.y + (circumradius * std::sin(angle));
-        Coordinates_3D new_position = {x, y, 0};
-        deployment_locations.push_back(new_position);
-        deployment_file << "(" << new_position.keys.x << " " << new_position.keys.y << "),";
-    }
-    deployment_file.close();
 
     return deployment_locations;
 }
@@ -209,7 +163,7 @@ int main() {
     }
 
     // Define a function point to the different swarm init functions
-    using GetFormation = std::vector<Coordinates_3D> (*)(Geo_coordinate&, double, std::filesystem::path&);
+    using GetFormation = std::vector<Coordinates_3D> (*)(Geo_coordinate&, double);
 
     std::vector<std::future<void>> futures; // List of threads
     // Generate all scenarios to run
@@ -304,11 +258,17 @@ int main() {
                                             oss_ant_ht.str() + "_" +
                                             std::to_string(int(frequency/1'000'000)) + "_" +
                                             formation_name;
-                std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
                 // Set the centroid of the deployment
                 Geo_coordinate deployment_region_centroid {.longitude = -83.5, .latitude = 19.0}; // Deployment coordinates
                 // Get deployment locations
-                std::vector<Coordinates_3D> deployment_locations = get_formation(deployment_region_centroid, distance, deployment_file_path);
+                std::vector<Coordinates_3D> deployment_locations = get_formation(deployment_region_centroid, distance);
+                // Write deployment locations to file
+                std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
+                std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
+                for (auto& deployment : deployment_locations) {
+                    deployment_file << deployment.keys.x << "," << deployment.keys.y << std::endl;
+                }
+                deployment_file.close();
                 // Initialise the sea surface
                 double wave_dp = PI/3.0; // rad
                 int count_component_waves = 15;
