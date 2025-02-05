@@ -39,7 +39,7 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, 
     this->results_dir = results_dir;
     this->scenario_name = scenario_name;
     this->radio_attenuation_threshold = get_free_space_path_loss(radio_frequency, distance);
-    this->swarm_size = asvs->size();
+    this->swarm_size = asvs.size();
     for (auto asv : asvs) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
         graph[v].asv = asv;
