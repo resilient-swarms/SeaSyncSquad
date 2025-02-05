@@ -64,9 +64,9 @@ void Swarm::run_simulation() {
     // Open files to write simulation results
     std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
     std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
-    // std::ofstream comms_result_file(comms_result_file_path); // write results to file
+    std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
-    // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
+    comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
     graph_result_file << "time(sec),avg_edge_dist(m),min_edge_dist(m),avg_fresnel_clr(%),min_fresnel_clr(%),avg_diffraction_loss(dB),max_diffraction_loss(dB),avg_total_loss(dB),max_total_loss(dB),num_components,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
@@ -127,22 +127,22 @@ void Swarm::run_simulation() {
             graph[edge].total_attenuation = total_loss;
             edge_total_losses.push_back(total_loss);
             // Write results to file
-            // comms_result_file << time << ","
-            //             << x1 << "," // m
-            //             << y1 << "," // m
-            //             << x2 << "," // m
-            //             << y2 << "," // m
-            //             << d << "," // m
-            //             << sea_surface_get_significant_height(sea_surface) << "," // m
-            //             << wind_speed*3.6 << "," // km/hr
-            //             << rainfall_rate << "," // mm/hr
-            //             << antenna_height << "," // m
-            //             << radio_frequency/1'000'000 << "," // MHz
-            //             << graph[edge].free_space_path_loss << "," // dB
-            //             << graph[edge].diffraction_loss << "," // dB
-            //             << graph[edge].fresnel_clearance << "," // %
-            //             << graph[edge].rain_attenuation << "," // dB
-            //             << graph[edge].sea_spray_attenuation << std::endl; // dB
+            comms_result_file << time << ","
+                        << x1 << "," // m
+                        << y1 << "," // m
+                        << x2 << "," // m
+                        << y2 << "," // m
+                        << d << "," // m
+                        << sea_surface_get_significant_height(sea_surface) << "," // m
+                        << wind_speed*3.6 << "," // km/hr
+                        << rainfall_rate << "," // mm/hr
+                        << antenna_height << "," // m
+                        << radio_frequency/1'000'000 << "," // MHz
+                        << graph[edge].free_space_path_loss << "," // dB
+                        << graph[edge].diffraction_loss << "," // dB
+                        << graph[edge].fresnel_clearance << "," // %
+                        << graph[edge].rain_attenuation << "," // dB
+                        << graph[edge].sea_spray_attenuation << std::endl; // dB
         }
         // Quantify graph connectivity
         double avg_edge_distance = std::accumulate(edge_distances.begin(), edge_distances.end(), 0.0) / edge_distances.size();
@@ -177,7 +177,17 @@ void Swarm::run_simulation() {
                     << num_components << ","
                     << spatial_connectivity_index << std::endl;
     }
-    // comms_result_file.close();
+    comms_result_file.close();
     graph_result_file.close();
 }
+
+std::vector<Asv *> Swarm::get_asvs() {
+    std::vector<Asv*> asvs;
+    Graph::vertex_iterator vi, vi_end;
+    for (boost::tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+        asvs.push_back(graph[*vi].asv);
+    }
+    return asvs;
+}
+
 

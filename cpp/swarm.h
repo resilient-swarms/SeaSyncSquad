@@ -31,6 +31,7 @@ public:
     Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name);
     void set_comms_link(std::pair<Asv*, Asv*> comms_link);
     void run_simulation();
+    std::vector<Asv*> get_asvs();
 
 private:
     double simulation_time = 15.0 * 60.0; // seconds
