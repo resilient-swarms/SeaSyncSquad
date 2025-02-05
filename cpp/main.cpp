@@ -297,13 +297,13 @@ int main() {
                 std::ostringstream oss_wave_ht; // Create a string stream to format the double
                 oss_ant_ht << std::fixed << std::setprecision(2) << ant_ht;
                 oss_wave_ht << std::fixed << std::setprecision(1) << wave_ht;
-                std::string scenario_name = formation_name + "_" +
-                                            std::to_string(int(distance)) + "_" +
+                std::string scenario_name = std::to_string(int(distance)) + "_" +
                                             oss_wave_ht.str() + "_" +
                                             std::to_string(int(wind_speed*3.6)) + "_" +
                                             std::to_string(int(rainfall_rate)) + "_" +
                                             oss_ant_ht.str() + "_" +
-                                            std::to_string(int(frequency/1'000'000));
+                                            std::to_string(int(frequency/1'000'000)) + "_" +
+                                            formation_name;
                 std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
                 // Set the centroid of the deployment
                 Geo_coordinate deployment_region_centroid {.longitude = -83.5, .latitude = 19.0}; // Deployment coordinates
