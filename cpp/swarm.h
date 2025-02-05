@@ -43,6 +43,7 @@ private:
     double radio_frequency; // Hz
     double rainfall_rate; // mm/hr
     double wind_speed; // m/s
+    int swarm_size;
     Sea_surface* sea_surface;
     Graph graph;
     std::string scenario_name;

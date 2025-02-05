@@ -39,6 +39,7 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, 
     this->results_dir = results_dir;
     this->scenario_name = scenario_name;
     this->radio_attenuation_threshold = get_free_space_path_loss(radio_frequency, distance);
+    this->swarm_size = asvs->size();
     for (auto asv : asvs) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
         graph[v].asv = asv;
@@ -185,11 +186,12 @@ void Swarm::run_simulation() {
         double total_degree = std::accumulate(
             boost::vertices(filtered_graph).first, boost::vertices(filtered_graph).second, 0.0,
             [&](double sum, Graph::vertex_descriptor v) { return sum + boost::degree(v, filtered_graph); }
-    );
-        double mean_degree = node_count > 0 ? total_signal_attenuation / node_count : 0.0;
+            );
+        double mean_degree = node_count > 0 ? total_degree / node_count : 0.0;
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
         double reference_path_loss = get_free_space_path_loss(radio_frequency, distance);
-        double spatial_connectivity_index = (mean_edge_length/distance) - (mean_signal_attenuation/reference_path_loss) + mean_degree;
+        double max_degree = swarm_size - 1;
+        double spatial_connectivity_index = (mean_edge_length/distance) - (mean_signal_attenuation/reference_path_loss) + (mean_degree/max_degree);
         // Write results to file
         graph_result_file   << time << ","
                             << mean_edge_length << "," // m
