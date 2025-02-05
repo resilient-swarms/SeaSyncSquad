@@ -297,7 +297,7 @@ int main() {
                 std::ostringstream oss_wave_ht; // Create a string stream to format the double
                 oss_ant_ht << std::fixed << std::setprecision(2) << ant_ht;
                 oss_wave_ht << std::fixed << std::setprecision(1) << wave_ht;
-                std::string scenario_name = formation_name +
+                std::string scenario_name = formation_name + "_" +
                                             std::to_string(int(distance)) + "_" +
                                             oss_wave_ht.str() + "_" +
                                             std::to_string(int(wind_speed*3.6)) + "_" +
