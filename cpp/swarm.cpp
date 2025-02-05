@@ -23,8 +23,8 @@ struct EdgeFilter {
     bool operator()(const Graph::edge_descriptor& e) const {
         auto v1 = boost::source(e, *g);
         auto v2 = boost::target(e, *g);
-        double radio_attenuation_threshold = std::min((*g)[v1].radio_attenuation_threshold, (*g)[v2].radio_attenuation_threshold);
-        return g && (*g)[e].total_attenuation <= radio_attenuation_threshold + 50.0;
+        double radio_attenuation_threshold = std::min((*g)[v1].radio_attenuation_threshold, (*g)[v2].radio_attenuation_threshold) + 20.0;
+        return radio_attenuation_threshold >= (*g)[e].total_attenuation;
     }
 };
 
@@ -72,7 +72,7 @@ void Swarm::run_simulation() {
     std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
     comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
-    graph_result_file << "time(sec),avg_edge_dist(m),avg_attenuation(dB),density,num_components,spatial_connectivity_index" << std::endl;
+    graph_result_file << "time(sec),avg_edge_dist(m),avg_attenuation(dB),cumulative_degree,avg_degree,density,num_components,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
@@ -169,6 +169,13 @@ void Swarm::run_simulation() {
                     return sum + trimmed_graph[e].total_attenuation;
                 }) / edge_count;
         }
+        double cumulative_degree = 0.0; // The parameter that indicates the number of connections per node to other nodes is the degree of the vertex
+                                 // Degree (for an undirected graph) = The number of edges connected to a vertex.
+        for (auto v : boost::make_iterator_range(boost::vertices(trimmed_graph))) {
+            int degree_v = boost::degree(v, trimmed_graph);
+            cumulative_degree += degree_v;
+        }
+        double avg_degree = cumulative_degree / boost::num_vertices(trimmed_graph);
         // Calculate graph density
         // Ref: https://en.wikipedia.org/wiki/Dense_graph
         // if density = 1, then graph is fully connected.
@@ -181,11 +188,13 @@ void Swarm::run_simulation() {
         std::vector<int> components(boost::num_vertices(trimmed_graph));
         double num_components = boost::connected_components(trimmed_graph, components.data());
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
-        double spatial_connectivity_index = (avg_edge_distance * density * (1.0/num_components)) - avg_attenuation;
+        double spatial_connectivity_index = (avg_edge_distance * density * (1.0/num_components)) - avg_attenuation + cumulative_degree;
         // Write results to file
         graph_result_file   << time << ","
                             << avg_edge_distance << "," // m
                             << avg_attenuation << "," // dB
+                            << cumulative_degree << ","
+                            << avg_degree << ","
                             << density << ","
                             << num_components << ","
                             << spatial_connectivity_index << std::endl;
