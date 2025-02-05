@@ -126,6 +126,10 @@ std::vector<Coordinates_3D> get_fomation_line(Geo_coordinate& deployment_region_
     Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
     Coordinates_3D leftmost = {region_centroid.keys.x - 4 * asv_spacing, region_centroid.keys.y, 0};
     std::vector<Coordinates_3D> deployment_locations;
+    for (int i = 0; i < 9 ; ++i) {
+        Coordinates_3D new_position = {leftmost.keys.x + (i*asv_spacing), region_centroid.keys.y, 0};
+        deployment_locations.push_back(new_position);
+    }
 
     return deployment_locations;
 }
@@ -146,6 +150,14 @@ std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_regio
     Geo_coordinate_converter geo_coordinate_converter(deployment_region_centroid);
     Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
     std::vector<Coordinates_3D> deployment_locations;
+    for (int i = 0; i < 9 ; ++i) {
+        double angle = i*(2.0*PI)/9;
+        double circumradius = asv_spacing / (2 * std::sin(PI / 9));
+        double x = region_centroid.keys.x + (circumradius * std::cos(angle));
+        double y = region_centroid.keys.y + (circumradius * std::sin(angle));
+        Coordinates_3D new_position = {x, y, 0};
+        deployment_locations.push_back(new_position);
+    }
 
     return deployment_locations;
 }
@@ -265,6 +277,7 @@ int main() {
                 // Write deployment locations to file
                 std::filesystem::path deployment_file_path = results_dir/("deployment_" + scenario_name + ".csv");
                 std::ofstream deployment_file(deployment_file_path); // Write deployment config to file
+                deployment_file << "x(m)" << "," << "y(m)" << std::endl;
                 for (auto& deployment : deployment_locations) {
                     deployment_file << deployment.keys.x << "," << deployment.keys.y << std::endl;
                 }

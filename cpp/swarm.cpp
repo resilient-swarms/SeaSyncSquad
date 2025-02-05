@@ -48,10 +48,9 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, 
 
 void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
     auto find_vertex = [&](const Asv* asv) -> Graph::vertex_descriptor {
-        Graph::vertex_iterator vi, vi_end;
-        for (boost::tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
-            if (graph[*vi].asv == asv) {
-                return *vi;
+        for (auto v : boost::make_iterator_range(boost::vertices(graph))) {
+            if (graph[v].asv == asv) {
+                return v;
             }
         }
         throw std::runtime_error("Vertex not found");
@@ -72,7 +71,7 @@ void Swarm::run_simulation() {
     std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
     comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
-    graph_result_file << "time(sec),avg_edge_dist(m),avg_attenuation(dB),cumulative_degree,avg_degree,density,num_components,spatial_connectivity_index" << std::endl;
+    graph_result_file << "time(sec),mean_edge_length(m),ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
@@ -80,18 +79,12 @@ void Swarm::run_simulation() {
     // Run till end of simulation time
     for(double time = 0; time < simulation_time; time += simulation_time_step_size/1000.0) {
         // Update the dynamics for all asvs
-        Graph::vertex_iterator vi, vi_end;
-        for (boost::tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
-            Asv* asv = graph[*vi].asv;
+        for (auto v : boost::make_iterator_range(boost::vertices(graph))) {
+            Asv* asv = graph[v].asv;
             wave_glider_compute_dynamics(asv, rudder_angle, simulation_time_step_size);
         }
 
         // For each edge of the graph, compute the radio attenuation
-        std::vector<double> edge_distances;
-        std::vector<double> edge_fresnel_clearances;
-        std::vector<double> edge_diffraction_losses;
-        std::vector<double> edge_total_losses;
-        std::vector<double> edge_normalised_losses;
         for (auto edge : boost::make_iterator_range(boost::edges(graph))) {
             // Get edge vertices
             Graph::vertex_descriptor v1 = boost::source(edge, graph);
@@ -109,10 +102,9 @@ void Swarm::run_simulation() {
             double y2 = p2.keys.y;
             double d = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
             graph[edge].distance = d;
-            edge_distances.push_back(d);
             // Calculate free space path loss
             double free_space_path_loss = get_free_space_path_loss(radio_frequency, d);
-            graph[edge].free_space_path_loss = free_space_path_loss;
+            graph[edge].free_space_path_loss = free_space_path_loss; //dB
             // Calculate rain attenuation
             Polarisation polarisation = Polarisation::vertical; // Widely used in maritime communications, especially for line-of-sight VHF and UHF radio communication systems, including ship-to-ship and ship-to-shore links.
             double rain_attenuation = get_rain_attenuation(radio_frequency, d, polarisation, rainfall_rate);
@@ -125,12 +117,9 @@ void Swarm::run_simulation() {
             std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, d, sea_surface, antenna_positions, time, simulation_time_step_size);
             graph[edge].fresnel_clearance = min_fresnel_clearance_and_diffraction_loss.first;
             graph[edge].diffraction_loss = min_fresnel_clearance_and_diffraction_loss.second;
-            edge_fresnel_clearances.push_back(graph[edge].fresnel_clearance);
-            edge_diffraction_losses.push_back(graph[edge].diffraction_loss);
             // Calculate total loss
-            double total_loss = free_space_path_loss + rain_attenuation + sea_spray_attenuation + graph[edge].diffraction_loss;
+            double total_loss = graph[edge].free_space_path_loss + graph[edge].rain_attenuation + graph[edge].sea_spray_attenuation + graph[edge].diffraction_loss;
             graph[edge].total_attenuation = total_loss;
-            edge_total_losses.push_back(total_loss);
             // Write results to file
             comms_result_file << time << ","
                         << x1 << "," // m
@@ -151,52 +140,66 @@ void Swarm::run_simulation() {
         }
         // Create filtered graph
         EdgeFilter filter(graph);
-        boost::filtered_graph<Graph, EdgeFilter> trimmed_graph(graph, filter);
-        auto edges = boost::edges(trimmed_graph);  // Store iterator pair
-        size_t edge_count = boost::num_edges(trimmed_graph);
+        boost::filtered_graph<Graph, EdgeFilter> filtered_graph(graph, filter);
         // Quantify graph connectivity
-        double avg_edge_distance = 0.0;
-        if (edge_count > 0) {
-            avg_edge_distance = std::accumulate(edges.first, edges.second, 0.0,
-                [&](double sum, Graph::edge_descriptor e) {
-                    return sum + trimmed_graph[e].distance;
-                }) / edge_count;
-        }
-        double avg_attenuation = 0.0;
-        if (edge_count > 0) {
-            avg_attenuation = std::accumulate(edges.first, edges.second, 0.0,
-                [&](double sum, Graph::edge_descriptor e) {
-                    return sum + trimmed_graph[e].total_attenuation;
-                }) / edge_count;
-        }
-        double cumulative_degree = 0.0; // The parameter that indicates the number of connections per node to other nodes is the degree of the vertex
-                                 // Degree (for an undirected graph) = The number of edges connected to a vertex.
-        for (auto v : boost::make_iterator_range(boost::vertices(trimmed_graph))) {
-            int degree_v = boost::degree(v, trimmed_graph);
-            cumulative_degree += degree_v;
-        }
-        double avg_degree = cumulative_degree / boost::num_vertices(trimmed_graph);
-        // Calculate graph density
-        // Ref: https://en.wikipedia.org/wiki/Dense_graph
-        // if density = 1, then graph is fully connected.
-        // if density = 0, then graph is sparse.
-        double density = 2.0 * boost::num_edges(trimmed_graph) / (boost::num_vertices(trimmed_graph) * (boost::num_vertices(trimmed_graph) - 1));
-        // Calculate number of connected components
-        // If num_components == 1, the graph is fully connected.
-        // If num_components > 1, the graph is NOT fully connected.
-        // Calculate connected components
-        std::vector<int> components(boost::num_vertices(trimmed_graph));
-        double num_components = boost::connected_components(trimmed_graph, components.data());
+        // Count the number of filtered edges
+        size_t edge_count = std::distance(boost::edges(filtered_graph).first, boost::edges(filtered_graph).second);
+        size_t node_count = std::distance(boost::vertices(filtered_graph).first, boost::vertices(filtered_graph).second);
+        // Mean edge length
+        double total_edge_length = std::accumulate(
+            boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
+            [&](double sum, Graph::edge_descriptor e) { return sum + filtered_graph[e].distance; }
+            );
+        double mean_edge_length = edge_count > 0 ? total_edge_length / edge_count : 0.0;
+        // Mean free space path loss
+        double total_free_space_path_loss = std::accumulate(
+            boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
+            [&](double sum, Graph::edge_descriptor e) { return sum + filtered_graph[e].free_space_path_loss; }
+            );
+        double mean_free_space_path_loss = edge_count > 0 ? total_free_space_path_loss / edge_count : 0.0;
+        // Mean diffraction loss
+        double total_diffraction_loss = std::accumulate(
+            boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
+            [&](double sum, Graph::edge_descriptor e) { return sum + filtered_graph[e].diffraction_loss; }
+            );
+        double mean_diffraction_loss = edge_count > 0 ? total_diffraction_loss / edge_count : 0.0;
+        // Mean rain attenuation
+        double total_rain_attenuation = std::accumulate(
+            boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
+            [&](double sum, Graph::edge_descriptor e) { return sum + filtered_graph[e].rain_attenuation; }
+            );
+        double mean_rain_attenuation = edge_count > 0 ? total_rain_attenuation / edge_count : 0.0;
+        // Mean sea spray attenuation
+        double total_sea_spray_attenuation = std::accumulate(
+            boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
+            [&](double sum, Graph::edge_descriptor e) { return sum + filtered_graph[e].sea_spray_attenuation; }
+            );
+        double mean_sea_spray_attenuation = edge_count > 0 ? total_sea_spray_attenuation / edge_count : 0.0;
+        // Mean signal attenuation
+        double total_signal_attenuation = std::accumulate(
+            boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
+            [&](double sum, Graph::edge_descriptor e) { return sum + filtered_graph[e].total_attenuation; }
+            );
+        double mean_signal_attenuation = edge_count > 0 ? total_signal_attenuation / edge_count : 0.0;
+        // Mean degree
+        double total_degree = std::accumulate(
+            boost::vertices(filtered_graph).first, boost::vertices(filtered_graph).second, 0.0,
+            [&](double sum, Graph::vertex_descriptor v) { return sum + boost::degree(v, filtered_graph); }
+    );
+        double mean_degree = node_count > 0 ? total_signal_attenuation / node_count : 0.0;
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
-        double spatial_connectivity_index = (avg_edge_distance * density * (1.0/num_components)) - avg_attenuation + cumulative_degree;
+        double reference_path_loss = get_free_space_path_loss(radio_frequency, distance);
+        double spatial_connectivity_index = (mean_edge_length/distance) - (mean_signal_attenuation/reference_path_loss) + mean_degree;
         // Write results to file
         graph_result_file   << time << ","
-                            << avg_edge_distance << "," // m
-                            << avg_attenuation << "," // dB
-                            << cumulative_degree << ","
-                            << avg_degree << ","
-                            << density << ","
-                            << num_components << ","
+                            << mean_edge_length << "," // m
+                            << reference_path_loss << "," // dB
+                            << mean_free_space_path_loss << ","
+                            << mean_rain_attenuation << ","
+                            << mean_sea_spray_attenuation << ","
+                            << mean_diffraction_loss << ","
+                            << mean_signal_attenuation << ","
+                            << mean_degree << ","
                             << spatial_connectivity_index << std::endl;
     }
     comms_result_file.close();
