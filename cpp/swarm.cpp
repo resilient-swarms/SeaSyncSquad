@@ -67,11 +67,11 @@ void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
 
 void Swarm::run_simulation() {
     // Open files to write simulation results
-    std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
+    // std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
     std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
-    std::ofstream comms_result_file(comms_result_file_path); // write results to file
+    // std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
-    comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
+    // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
     graph_result_file << "time(sec),mean_edge_length(m),ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
@@ -122,22 +122,22 @@ void Swarm::run_simulation() {
             double total_loss = graph[edge].free_space_path_loss + graph[edge].rain_attenuation + graph[edge].sea_spray_attenuation + graph[edge].diffraction_loss;
             graph[edge].total_attenuation = total_loss;
             // Write results to file
-            comms_result_file << time << ","
-                        << x1 << "," // m
-                        << y1 << "," // m
-                        << x2 << "," // m
-                        << y2 << "," // m
-                        << d << "," // m
-                        << sea_surface_get_significant_height(sea_surface) << "," // m
-                        << wind_speed*3.6 << "," // km/hr
-                        << rainfall_rate << "," // mm/hr
-                        << antenna_height << "," // m
-                        << radio_frequency/1'000'000 << "," // MHz
-                        << graph[edge].free_space_path_loss << "," // dB
-                        << graph[edge].diffraction_loss << "," // dB
-                        << graph[edge].fresnel_clearance << "," // %
-                        << graph[edge].rain_attenuation << "," // dB
-                        << graph[edge].sea_spray_attenuation << std::endl; // dB
+            // comms_result_file << time << ","
+            //             << x1 << "," // m
+            //             << y1 << "," // m
+            //             << x2 << "," // m
+            //             << y2 << "," // m
+            //             << d << "," // m
+            //             << sea_surface_get_significant_height(sea_surface) << "," // m
+            //             << wind_speed*3.6 << "," // km/hr
+            //             << rainfall_rate << "," // mm/hr
+            //             << antenna_height << "," // m
+            //             << radio_frequency/1'000'000 << "," // MHz
+            //             << graph[edge].free_space_path_loss << "," // dB
+            //             << graph[edge].diffraction_loss << "," // dB
+            //             << graph[edge].fresnel_clearance << "," // %
+            //             << graph[edge].rain_attenuation << "," // dB
+            //             << graph[edge].sea_spray_attenuation << std::endl; // dB
         }
         // Create filtered graph
         EdgeFilter filter(graph);
@@ -191,7 +191,7 @@ void Swarm::run_simulation() {
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
         double reference_path_loss = get_free_space_path_loss(radio_frequency, distance);
         double max_degree = swarm_size - 1;
-        double spatial_connectivity_index = (mean_edge_length/distance) - (mean_signal_attenuation/reference_path_loss) + (mean_degree/max_degree);
+        double spatial_connectivity_index = ((mean_edge_length/distance) + (reference_path_loss/mean_signal_attenuation) + (mean_degree/max_degree)) / 3.0;
         // Write results to file
         graph_result_file   << time << ","
                             << mean_edge_length << "," // m
@@ -204,7 +204,7 @@ void Swarm::run_simulation() {
                             << mean_degree << ","
                             << spatial_connectivity_index << std::endl;
     }
-    comms_result_file.close();
+    // comms_result_file.close();
     graph_result_file.close();
 }
 
