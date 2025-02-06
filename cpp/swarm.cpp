@@ -72,7 +72,7 @@ void Swarm::run_simulation() {
     // std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
     // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
-    graph_result_file << "time(sec),mean_edge_length(m),ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,spatial_connectivity_index" << std::endl;
+    graph_result_file << "time(sec),mean_edge_length(m),ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
@@ -146,6 +146,11 @@ void Swarm::run_simulation() {
         // Count the number of filtered edges
         size_t edge_count = std::distance(boost::edges(filtered_graph).first, boost::edges(filtered_graph).second);
         size_t node_count = std::distance(boost::vertices(filtered_graph).first, boost::vertices(filtered_graph).second);
+        // Graph Density
+        // Ref: https://en.wikipedia.org/wiki/Dense_graph
+        // Density ≈ 1 → Graph is fully connected.
+        // Density ≈ 0 → Graph is sparse.
+        double density = 2.0 * edge_count / (node_count * (node_count - 1));
         // Mean edge length
         double total_edge_length = std::accumulate(
             boost::edges(filtered_graph).first, boost::edges(filtered_graph).second, 0.0,
@@ -191,7 +196,7 @@ void Swarm::run_simulation() {
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
         double reference_path_loss = get_free_space_path_loss(radio_frequency, distance);
         double max_degree = swarm_size - 1;
-        double spatial_connectivity_index = ((mean_edge_length/distance) + (reference_path_loss/mean_signal_attenuation) + (mean_degree/max_degree)) / 3.0;
+        double spatial_connectivity_index = density * (mean_edge_length/distance) * (radio_attenuation_threshold/mean_signal_attenuation) * (mean_degree/max_degree);
         // Write results to file
         graph_result_file   << time << ","
                             << mean_edge_length << "," // m
@@ -202,6 +207,7 @@ void Swarm::run_simulation() {
                             << mean_diffraction_loss << ","
                             << mean_signal_attenuation << ","
                             << mean_degree << ","
+                            << density << ","
                             << spatial_connectivity_index << std::endl;
     }
     // comms_result_file.close();
