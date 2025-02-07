@@ -186,12 +186,12 @@ int main() {
     std::vector<double> antenna_hts;
     std::vector<double> radio_frequencies;
     std::vector<GetFormation> formation_getters;
-    for(double distance : {100.0, 400.0, 800.0, 1000.0}) { // m
-        for(double significant_wave_ht : {0.5, 1.0, 1.5, 2.0, 3.0}) { // m
-            for(double wind_speed : {50.0, 100.0}) { // km/hr
-                for(double rainfall_rate : {2.0, 10.0, 20.0, 30.0}) { // mm/hr
-                    for(double antenna_ht : {0.05, 0.1, 0.5, 1.0, 2.0, 3.0}) { // m
-                        for(double radio_frequency : {868.0, 2400.0, 5200.0}) { // MHz
+    for(double distance : {1000.0, 3000.0, 5000.0}) { // m
+        for(double significant_wave_ht : {1.0, 3.0, 5.0, 7.0, 10.0, 12.0}) { // m
+            for(double wind_speed : {10.0}) { // km/hr
+                for(double rainfall_rate : {10.0}) { // mm/hr
+                    for(double antenna_ht : {1.0, 2.0, 3.0}) { // m
+                        for(double radio_frequency : {470.0, 868.0, 2400.0}) { // MHz
                             for (GetFormation get_formation : {get_fomation_hex, get_fomation_squ, get_fomation_line, get_fomation_circle}) {
                                 distances.push_back(distance);
                                 significant_wave_hts.push_back(significant_wave_ht);

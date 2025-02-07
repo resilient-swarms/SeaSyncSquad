@@ -23,7 +23,7 @@ struct EdgeFilter {
     bool operator()(const Graph::edge_descriptor& e) const {
         auto v1 = boost::source(e, *g);
         auto v2 = boost::target(e, *g);
-        double radio_attenuation_threshold = std::min((*g)[v1].radio_attenuation_threshold, (*g)[v2].radio_attenuation_threshold) + 20.0;
+        double radio_attenuation_threshold = std::min((*g)[v1].radio_attenuation_threshold, (*g)[v2].radio_attenuation_threshold) + 50.0;
         return radio_attenuation_threshold >= (*g)[e].total_attenuation;
     }
 };
@@ -195,8 +195,8 @@ void Swarm::run_simulation() {
         double mean_degree = node_count > 0 ? total_degree / node_count : 0.0;
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
         double reference_path_loss = get_free_space_path_loss(radio_frequency, distance);
-        double max_degree = swarm_size - 1;
-        double spatial_connectivity_index = density * (mean_edge_length/distance) * (radio_attenuation_threshold/mean_signal_attenuation) * (mean_degree/max_degree);
+        double antenna_max_range = std::pow(10.0, (radio_attenuation_threshold - 32.4) / 20.0 - std::log10(radio_frequency));
+        double spatial_connectivity_index = density * (mean_edge_length/antenna_max_range);
         // Write results to file
         graph_result_file   << time << ","
                             << mean_edge_length << "," // m
