@@ -23,7 +23,7 @@ struct EdgeFilter {
     bool operator()(const Graph::edge_descriptor& e) const {
         auto v1 = boost::source(e, *g);
         auto v2 = boost::target(e, *g);
-        double radio_attenuation_threshold = std::min((*g)[v1].radio_attenuation_threshold, (*g)[v2].radio_attenuation_threshold) + 20.0;
+        double radio_attenuation_threshold = std::min((*g)[v1].radio_attenuation_threshold, (*g)[v2].radio_attenuation_threshold);
         return radio_attenuation_threshold >= (*g)[e].total_attenuation;
     }
 };
@@ -38,7 +38,7 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, 
     this->wind_speed = wind_speed;
     this->results_dir = results_dir;
     this->scenario_name = scenario_name;
-    this->radio_attenuation_threshold = get_free_space_path_loss(radio_frequency, distance);
+    this->radio_attenuation_threshold = get_free_space_path_loss(radio_frequency, distance) + 20.0;
     this->swarm_size = asvs.size();
     for (auto asv : asvs) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
