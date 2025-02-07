@@ -186,21 +186,22 @@ int main() {
     std::vector<double> antenna_hts;
     std::vector<double> radio_frequencies;
     std::vector<GetFormation> formation_getters;
-    for(double distance : {1000.0, 3000.0, 5000.0}) { // m
+    std::vector<std::pair<double, double>> freq_dist_pairs = {{450.0, 10'000.0}, {868.0, 5'000.0}, {2400.0, 1'000.0}, {5200.0, 500.0}}; // {MHz, m}
+    for(auto freq_dist_pair : freq_dist_pairs) {
         for(double significant_wave_ht : {1.0, 3.0, 5.0, 7.0, 10.0, 12.0}) { // m
             for(double wind_speed : {10.0}) { // km/hr
                 for(double rainfall_rate : {10.0}) { // mm/hr
                     for(double antenna_ht : {1.0, 2.0, 3.0}) { // m
-                        for(double radio_frequency : {470.0, 868.0, 2400.0}) { // MHz
-                            for (GetFormation get_formation : {get_fomation_hex, get_fomation_squ, get_fomation_line, get_fomation_circle}) {
-                                distances.push_back(distance);
-                                significant_wave_hts.push_back(significant_wave_ht);
-                                wind_speeds.push_back(wind_speed);
-                                rainfall_rates.push_back(rainfall_rate);
-                                antenna_hts.push_back(antenna_ht);
-                                radio_frequencies.push_back(radio_frequency);
-                                formation_getters.push_back(get_formation);
-                            }
+                        for (GetFormation get_formation : {get_fomation_hex, get_fomation_squ, get_fomation_line, get_fomation_circle}) {
+                            double frequency = freq_dist_pair.first; // MHz
+                            double distance = freq_dist_pair.second; // m
+                            distances.push_back(distance);
+                            radio_frequencies.push_back(frequency);
+                            significant_wave_hts.push_back(significant_wave_ht);
+                            wind_speeds.push_back(wind_speed);
+                            rainfall_rates.push_back(rainfall_rate);
+                            antenna_hts.push_back(antenna_ht);
+                            formation_getters.push_back(get_formation);
                         }
                     }
                 }
