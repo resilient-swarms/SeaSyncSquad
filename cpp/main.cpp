@@ -150,9 +150,10 @@ std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_regio
     Geo_coordinate_converter geo_coordinate_converter(deployment_region_centroid);
     Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
     std::vector<Coordinates_3D> deployment_locations;
-    for (int i = 0; i < 9 ; ++i) {
-        double angle = i*(2.0*PI)/9;
-        double circumradius = asv_spacing / (2 * std::sin(PI / 9));
+    int num_edges = 9;
+    for (int i = 0; i < num_edges ; ++i) {
+        double angle = i*(2.0*PI)/num_edges;
+        double circumradius = asv_spacing / (2 * std::sin(PI / num_edges));
         double x = region_centroid.keys.x + (circumradius * std::cos(angle));
         double y = region_centroid.keys.y + (circumradius * std::sin(angle));
         Coordinates_3D new_position = {x, y, 0};

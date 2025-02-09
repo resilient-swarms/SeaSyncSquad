@@ -35,8 +35,9 @@ public:
     std::vector<Asv*> get_asvs();
 
 private:
-    double simulation_time = 15.0 * 60.0; // seconds
+    double simulation_time = 5.0 * 60.0; // seconds
     double simulation_time_step_size = 40.0; // milli-sec
+    double radio_margin = 20.0; // dB
     double radio_attenuation_threshold; // dB
     double distance; // m
     double antenna_height; // m
