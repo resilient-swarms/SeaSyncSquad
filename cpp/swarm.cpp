@@ -29,21 +29,31 @@ struct EdgeFilter {
 };
 
 
-Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name) {
+Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name) {
+    this->results_dir = results_dir;
+    this->scenario_name = scenario_name;
     this->sea_surface = sea_surface;
-    this->distance = distance;
     this->antenna_height = antenna_height;
     this->radio_frequency = radio_frequency;
     this->rainfall_rate = rainfall_rate;
     this->wind_speed = wind_speed;
-    this->results_dir = results_dir;
-    this->scenario_name = scenario_name;
-    this->radio_attenuation_threshold = get_free_space_path_loss(radio_frequency, distance) + radio_margin; //dB
-    this->swarm_size = asvs.size();
+    this->fspl_design = fspl_design;
+    this->environmental_excess_loss = environmental_excess_loss;
+    radio_attenuation_threshold = fspl_design + environmental_excess_loss;
+    free_space_radio_range = std::pow(10.0, (fspl_design - 32.4) / 20.0 - std::log10(radio_frequency/1'000'000.0)) * 1000.0; // m
+    swarm_size = asvs.size();
+    // Create graph vertices
     for (auto asv : asvs) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
         graph[v].asv = asv;
         graph[v].radio_attenuation_threshold = this->radio_attenuation_threshold;
+    }
+    // Create graph edges
+    for(int i = 0; i < swarm_size; i++) {
+        for(int j = i+1; j < swarm_size; j++) {
+            std::pair<Asv*, Asv*> asv_pair = std::make_pair(asvs[i], asvs[j]);
+            set_comms_link(asv_pair);
+        }
     }
 }
 
@@ -65,14 +75,16 @@ void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
     }
 }
 
-void Swarm::run_simulation() {
+double Swarm::run_simulation() {
+    double spatial_connectivity_index; // return value
+
     // Open files to write simulation results
     // std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
     std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
     // std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
     // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
-    graph_result_file << "time(sec),mean_edge_length(m),max_radio_range(m),ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
+    graph_result_file << "time(sec),mean_edge_length(m),free_space_radio_range(m),fspl_design(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
@@ -215,15 +227,13 @@ void Swarm::run_simulation() {
             );
         double mean_degree = node_count > 0 ? total_degree / node_count : 0.0;
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
-        double reference_path_loss = get_free_space_path_loss(radio_frequency, distance);
-        double max_radio_range = std::pow(10.0, ((radio_attenuation_threshold - radio_margin) - 32.4) / 20.0 - std::log10(radio_frequency/1'000'000.0)) * 1000.0; // m
-        double dispersion_index = mean_edge_length/max_radio_range;
-        double spatial_connectivity_index = (density + dispersion_index + dispersion_shape_index) / (3 * num_components);
+        double dispersion_index = mean_edge_length/free_space_radio_range;
+        spatial_connectivity_index = (density + dispersion_index + dispersion_shape_index) / (3 * num_components);
         // Write results to file
         graph_result_file   << time << ","
                             << mean_edge_length << "," // m
-                            << max_radio_range << "," // m
-                            << reference_path_loss << "," // dB
+                            << free_space_radio_range << "," // m
+                            << fspl_design << "," // dB
                             << mean_free_space_path_loss << ","
                             << mean_rain_attenuation << ","
                             << mean_sea_spray_attenuation << ","
@@ -238,6 +248,8 @@ void Swarm::run_simulation() {
     }
     // comms_result_file.close();
     graph_result_file.close();
+
+    return spatial_connectivity_index;
 }
 
 std::vector<Asv *> Swarm::get_asvs() {

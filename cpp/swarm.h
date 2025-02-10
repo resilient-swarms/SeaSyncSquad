@@ -29,23 +29,24 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 
 class Swarm {
 public:
-    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double distance, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, std::filesystem::path results_dir, std::string scenario_name);
+    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name);
     void set_comms_link(std::pair<Asv*, Asv*> comms_link);
-    void run_simulation();
+    double run_simulation();
     std::vector<Asv*> get_asvs();
 
 private:
-    double simulation_time = 5.0 * 60.0; // seconds
-    double simulation_time_step_size = 40.0; // milli-sec
-    double radio_margin = 20.0; // dB
-    double radio_attenuation_threshold; // dB
-    double distance; // m
     double antenna_height; // m
     double radio_frequency; // Hz
     double rainfall_rate; // mm/hr
     double wind_speed; // m/s
-    int swarm_size;
     Sea_surface* sea_surface;
+    double fspl_design; // Design free space path loss (dB)
+    double environmental_excess_loss; // Excess radio loss due to environment (dB)
+    double radio_attenuation_threshold; // dB
+    double free_space_radio_range; // m
+    int swarm_size;
+    double simulation_time = 5.0 * 60.0; // seconds
+    double simulation_time_step_size = 40.0; // milli-sec
     Graph graph;
     std::string scenario_name;
     std::filesystem::path results_dir;

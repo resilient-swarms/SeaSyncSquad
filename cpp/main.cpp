@@ -1,5 +1,6 @@
 #include "swarm.h"
 #include "utils.h"
+#include "radio_attenuation.h"
 #include <utility>
 #include <array>
 #include <vector>
@@ -221,7 +222,7 @@ int main() {
             for(double wind_speed : {10.0}) { // km/hr
                 for(double rainfall_rate : {10.0}) { // mm/hr
                     for(double antenna_ht : {1.0, 2.0, 3.0}) { // m
-                        for (GetFormation get_formation : {get_fomation_hex, get_fomation_squ, get_fomation_line, get_fomation_circle, get_fomation_hub_and_spoke}) {
+                        for (GetFormation get_formation : {get_formation_hex, get_formation_squ, get_formation_line, get_formation_circle, get_formation_hub_and_spoke}) {
                             double frequency = freq_dist_pair.first; // MHz
                             double distance = freq_dist_pair.second; // m
                             distances.push_back(distance);
@@ -251,15 +252,15 @@ int main() {
         // Spawn threads
         for(int i = jobs_start_index; i < jobs_end_index; ++i) {
             std::string print_swarm_init_function_name;
-            if (formation_getters[i] == get_fomation_hex) {
-                print_swarm_init_function_name = "get_fomation_hex";
-            } else if (formation_getters[i] == get_fomation_squ) {
-                print_swarm_init_function_name = "get_fomation_squ";
-            } else if (formation_getters[i] == get_fomation_line) {
-                print_swarm_init_function_name = "get_fomation_line";
-            } else if (formation_getters[i] == get_fomation_circle) {
-                print_swarm_init_function_name = "get_fomation_circle";
-            } else if (formation_getters[i] == get_fomation_hub_and_spoke) {
+            if (formation_getters[i] == get_formation_hex) {
+                print_swarm_init_function_name = "get_formation_hex";
+            } else if (formation_getters[i] == get_formation_squ) {
+                print_swarm_init_function_name = "get_formation_squ";
+            } else if (formation_getters[i] == get_formation_line) {
+                print_swarm_init_function_name = "get_formation_line";
+            } else if (formation_getters[i] == get_formation_circle) {
+                print_swarm_init_function_name = "get_formation_circle";
+            } else if (formation_getters[i] == get_formation_hub_and_spoke) {
                 print_swarm_init_function_name = "get_fomation_hub_and_spoke";
             }
             std::cout<<"["<<i+1<<" / "  << count_total_scenarios<<"]";
@@ -281,15 +282,15 @@ int main() {
             auto thread_worker_function = [](double ant_ht, double frequency, double distance, double wind_speed, double wave_ht, double rainfall_rate, GetFormation get_formation, std::filesystem::path results_dir) {
                 // Formation name
                 std::string formation_name;
-                if (get_formation == get_fomation_hex) {
+                if (get_formation == get_formation_hex) {
                     formation_name = "hex";
-                } else if (get_formation == get_fomation_squ) {
+                } else if (get_formation == get_formation_squ) {
                     formation_name = "squ";
-                } else if (get_formation == get_fomation_line) {
+                } else if (get_formation == get_formation_line) {
                     formation_name = "line";
-                } else if (get_formation == get_fomation_circle) {
+                } else if (get_formation == get_formation_circle) {
                     formation_name = "circle";
-                } else if (get_formation == get_fomation_hub_and_spoke) {
+                } else if (get_formation == get_formation_hub_and_spoke) {
                     formation_name = "hub_and_spoke";
                 }
                 // Construct scenario name
@@ -343,7 +344,9 @@ int main() {
                     asvs.push_back(asv);
                 }
                 // Init swarm
-                Swarm swarm(asvs, sea_surface, distance, ant_ht, frequency, rainfall_rate, wind_speed, results_dir, scenario_name);
+                double fspl_design = get_free_space_path_loss(frequency, distance); // dB
+                double environmental_excess_loss = 20.0; // dB
+                Swarm swarm(asvs, sea_surface, ant_ht, frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss, results_dir, scenario_name);
                 // Create ASV pairs
                 for (int i = 0; i < asvs.size(); ++i) {
                     for (int j = i+1; j < asvs.size(); ++j) {
