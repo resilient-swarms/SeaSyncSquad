@@ -72,7 +72,7 @@ void Swarm::run_simulation() {
     // std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
     // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
-    graph_result_file << "time(sec),mean_edge_length(m),max_radio_range,ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
+    graph_result_file << "time(sec),mean_edge_length(m),max_radio_range(m),ref_path_loss(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
