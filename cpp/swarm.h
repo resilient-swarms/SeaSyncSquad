@@ -29,6 +29,7 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 
 class Swarm {
 public:
+    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss);
     Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name);
     void set_comms_link(std::pair<Asv*, Asv*> comms_link);
     double run_simulation();
@@ -50,6 +51,7 @@ private:
     Graph graph;
     std::string scenario_name;
     std::filesystem::path results_dir;
+    bool print_to_dir;
 };
 
 

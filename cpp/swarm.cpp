@@ -28,10 +28,7 @@ struct EdgeFilter {
     }
 };
 
-
-Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name) {
-    this->results_dir = results_dir;
-    this->scenario_name = scenario_name;
+Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss) {
     this->sea_surface = sea_surface;
     this->antenna_height = antenna_height;
     this->radio_frequency = radio_frequency;
@@ -39,6 +36,7 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_he
     this->wind_speed = wind_speed;
     this->fspl_design = fspl_design;
     this->environmental_excess_loss = environmental_excess_loss;
+    print_to_dir = false;
     radio_attenuation_threshold = fspl_design + environmental_excess_loss;
     free_space_radio_range = std::pow(10.0, (fspl_design - 32.4) / 20.0 - std::log10(radio_frequency/1'000'000.0)) * 1000.0; // m
     swarm_size = asvs.size();
@@ -55,6 +53,14 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_he
             set_comms_link(asv_pair);
         }
     }
+}
+
+
+Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name) {
+    Swarm(asvs, sea_surface, antenna_height, radio_frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);
+    this->results_dir = results_dir;
+    this->scenario_name = scenario_name;
+    print_to_dir = true;
 }
 
 void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
@@ -79,12 +85,14 @@ double Swarm::run_simulation() {
     double spatial_connectivity_index; // return value
 
     // Open files to write simulation results
-    // std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
+    std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
     std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
-    // std::ofstream comms_result_file(comms_result_file_path); // write results to file
+    std::ofstream comms_result_file(comms_result_file_path); // write results to file
     std::ofstream graph_result_file(graph_result_file_path); // write results to file
-    // comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
-    graph_result_file << "time(sec),mean_edge_length(m),free_space_radio_range(m),fspl_design(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
+    if (print_to_dir) {
+        comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
+        graph_result_file << "time(sec),mean_edge_length(m),free_space_radio_range(m),fspl_design(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
+    }
 
     // We will use a fixed rudder angle for both ASVs
     double rudder_angle = PI/4; // rad
@@ -134,22 +142,24 @@ double Swarm::run_simulation() {
             double total_loss = graph[edge].free_space_path_loss + graph[edge].rain_attenuation + graph[edge].sea_spray_attenuation + graph[edge].diffraction_loss;
             graph[edge].total_attenuation = total_loss;
             // Write results to file
-            // comms_result_file << time << ","
-            //             << x1 << "," // m
-            //             << y1 << "," // m
-            //             << x2 << "," // m
-            //             << y2 << "," // m
-            //             << d << "," // m
-            //             << sea_surface_get_significant_height(sea_surface) << "," // m
-            //             << wind_speed*3.6 << "," // km/hr
-            //             << rainfall_rate << "," // mm/hr
-            //             << antenna_height << "," // m
-            //             << radio_frequency/1'000'000 << "," // MHz
-            //             << graph[edge].free_space_path_loss << "," // dB
-            //             << graph[edge].diffraction_loss << "," // dB
-            //             << graph[edge].fresnel_clearance << "," // %
-            //             << graph[edge].rain_attenuation << "," // dB
-            //             << graph[edge].sea_spray_attenuation << std::endl; // dB
+            if (print_to_dir) {
+                comms_result_file << time << ","
+                        << x1 << "," // m
+                        << y1 << "," // m
+                        << x2 << "," // m
+                        << y2 << "," // m
+                        << d << "," // m
+                        << sea_surface_get_significant_height(sea_surface) << "," // m
+                        << wind_speed*3.6 << "," // km/hr
+                        << rainfall_rate << "," // mm/hr
+                        << antenna_height << "," // m
+                        << radio_frequency/1'000'000 << "," // MHz
+                        << graph[edge].free_space_path_loss << "," // dB
+                        << graph[edge].diffraction_loss << "," // dB
+                        << graph[edge].fresnel_clearance << "," // %
+                        << graph[edge].rain_attenuation << "," // dB
+                        << graph[edge].sea_spray_attenuation << std::endl; // dB
+            }
         }
         // Dispersion index
         double total_pairwise_distance = std::accumulate(
@@ -172,7 +182,7 @@ double Swarm::run_simulation() {
         boost::copy_graph(filtered_graph, copied_graph);
         // // Quantify graph connectivity
         // Connected components
-        // num_components == 1, the graph is fully connected.
+        // num_components = 1, the graph is fully connected.
         // num_components > 1, the graph is not fully connected.
         std::vector<int> component(boost::num_vertices(copied_graph));
         int num_components = boost::connected_components(copied_graph, &component[0]);
@@ -230,7 +240,8 @@ double Swarm::run_simulation() {
         double dispersion_index = mean_edge_length/free_space_radio_range;
         spatial_connectivity_index = (density + dispersion_index + dispersion_shape_index) / (3 * num_components);
         // Write results to file
-        graph_result_file   << time << ","
+        if (print_to_dir) {
+            graph_result_file   << time << ","
                             << mean_edge_length << "," // m
                             << free_space_radio_range << "," // m
                             << fspl_design << "," // dB
@@ -245,9 +256,12 @@ double Swarm::run_simulation() {
                             << dispersion_index << ","
                             << dispersion_shape_index << ","
                             << spatial_connectivity_index << std::endl;
+        }
     }
-    // comms_result_file.close();
-    graph_result_file.close();
+    if (print_to_dir) {
+        comms_result_file.close();
+        graph_result_file.close();
+    }
 
     return spatial_connectivity_index;
 }
