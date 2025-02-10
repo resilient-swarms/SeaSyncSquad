@@ -14,7 +14,7 @@ extern "C" {
 #include "constants.h"
 }
 
-std::vector<Coordinates_3D> get_fomation_hex(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
+std::vector<Coordinates_3D> get_formation_hex(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - hexagonal.
     //  O   O   O       <-- North row
@@ -66,7 +66,7 @@ std::vector<Coordinates_3D> get_fomation_hex(Geo_coordinate& deployment_region_c
 }
 
 
-std::vector<Coordinates_3D> get_fomation_squ(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
+std::vector<Coordinates_3D> get_formation_squ(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - square.
     //  O   O   O   <-- North row
@@ -118,7 +118,7 @@ std::vector<Coordinates_3D> get_fomation_squ(Geo_coordinate& deployment_region_c
 }
 
 
-std::vector<Coordinates_3D> get_fomation_line(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
+std::vector<Coordinates_3D> get_formation_line(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - line.
     //  O   O   O   0   [0]   0   0   0   0
@@ -135,7 +135,7 @@ std::vector<Coordinates_3D> get_fomation_line(Geo_coordinate& deployment_region_
 }
 
 
-std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
+std::vector<Coordinates_3D> get_formation_circle(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
     // Initialise deployment coordinates
     // Deployment pattern - nonagon.
     //    0  -  0
@@ -153,12 +153,40 @@ std::vector<Coordinates_3D> get_fomation_circle(Geo_coordinate& deployment_regio
     int num_edges = 9;
     for (int i = 0; i < num_edges ; ++i) {
         double angle = i*(2.0*PI)/num_edges;
-        double circumradius = asv_spacing / (2 * std::sin(PI / num_edges));
-        double x = region_centroid.keys.x + (circumradius * std::cos(angle));
-        double y = region_centroid.keys.y + (circumradius * std::sin(angle));
+        double radius = asv_spacing / (2 * std::sin(PI / num_edges));
+        double x = region_centroid.keys.x + (radius * std::cos(angle));
+        double y = region_centroid.keys.y + (radius * std::sin(angle));
         Coordinates_3D new_position = {x, y, 0};
         deployment_locations.push_back(new_position);
     }
+
+    return deployment_locations;
+}
+
+
+std::vector<Coordinates_3D> get_formation_hub_and_spoke(Geo_coordinate& deployment_region_centroid, double asv_spacing) {
+    // Initialise deployment coordinates
+    //    0  -  0
+    //   /       \
+    //  0         0
+    //  |    0    |
+    //  0         0
+    //   \       /
+    //    0  -  0
+    Geo_coordinate_converter geo_coordinate_converter(deployment_region_centroid);
+    Coordinates_3D region_centroid = geo_coordinate_converter.convert(deployment_region_centroid);
+    std::vector<Coordinates_3D> deployment_locations;
+    int num_edges = 8;
+    for (int i = 0; i < num_edges ; ++i) {
+        double angle = i*(2.0*PI)/num_edges;
+        double radius = asv_spacing;
+        double x = region_centroid.keys.x + (radius * std::cos(angle));
+        double y = region_centroid.keys.y + (radius * std::sin(angle));
+        Coordinates_3D new_position = {x, y, 0};
+        deployment_locations.push_back(new_position);
+    }
+    // Finally add the point at the centre
+    deployment_locations.push_back(region_centroid);
 
     return deployment_locations;
 }
@@ -193,7 +221,7 @@ int main() {
             for(double wind_speed : {10.0}) { // km/hr
                 for(double rainfall_rate : {10.0}) { // mm/hr
                     for(double antenna_ht : {1.0, 2.0, 3.0}) { // m
-                        for (GetFormation get_formation : {get_fomation_hex, get_fomation_squ, get_fomation_line, get_fomation_circle}) {
+                        for (GetFormation get_formation : {get_fomation_hex, get_fomation_squ, get_fomation_line, get_fomation_circle, get_fomation_hub_and_spoke}) {
                             double frequency = freq_dist_pair.first; // MHz
                             double distance = freq_dist_pair.second; // m
                             distances.push_back(distance);
@@ -231,6 +259,8 @@ int main() {
                 print_swarm_init_function_name = "get_fomation_line";
             } else if (formation_getters[i] == get_fomation_circle) {
                 print_swarm_init_function_name = "get_fomation_circle";
+            } else if (formation_getters[i] == get_fomation_hub_and_spoke) {
+                print_swarm_init_function_name = "get_fomation_hub_and_spoke";
             }
             std::cout<<"["<<i+1<<" / "  << count_total_scenarios<<"]";
             std::cout<<" distance = "   << distances[i];
@@ -259,6 +289,8 @@ int main() {
                     formation_name = "line";
                 } else if (get_formation == get_fomation_circle) {
                     formation_name = "circle";
+                } else if (get_formation == get_fomation_hub_and_spoke) {
+                    formation_name = "hub_and_spoke";
                 }
                 // Construct scenario name
                 std::ostringstream oss_ant_ht; // Create a string stream to format the double
