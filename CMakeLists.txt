@@ -14,6 +14,7 @@ set( SOURCE
         cpp/main.cpp
         cpp/swarm.cpp
         cpp/radio_attenuation.cpp
+        cpp/rudder_controller.cpp
         cpp/netcdf_rain.cpp
         cpp/netcdf_wave.cpp
         cpp/netcdf_wind.cpp
@@ -36,6 +37,7 @@ find_package(Threads REQUIRED)
 find_package(GeographicLib REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(Python3 COMPONENTS NumPy REQUIRED)
+find_package(Eigen3 REQUIRED NO_MODULE)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         Threads::Threads
@@ -43,4 +45,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         netcdf-cxx4
         Python3::Python
         Python3::Module
-        Python3::NumPy)
+        Python3::NumPy
+        Eigen3::Eigen)

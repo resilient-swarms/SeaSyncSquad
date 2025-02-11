@@ -13,7 +13,7 @@ conda config --set channel_priority strict
 # Install dependencies using conda
 conda create --name seasyncsquad
 conda activate seasyncsquad
-conda install gcc gxx_linux-64 cmake python numpy matplotlib seaborn fmt cdsapi netcdf4 geographiclib-cpp libboost-python-devel boost-cpp
+conda install gcc gxx_linux-64 cmake python numpy matplotlib seaborn fmt cdsapi netcdf4 geographiclib-cpp libboost-python-devel boost-cpp eigen
 
 # Clone repository and compile
 git clone --recurse-submodules https://github.com/resilient-swarms/SeaSyncSquad.git
