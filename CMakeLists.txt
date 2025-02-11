@@ -10,6 +10,7 @@ include_directories(
 )
 
 set( SOURCE
+        cpp/disgo.cpp
         cpp/main.cpp
         cpp/swarm.cpp
         cpp/radio_attenuation.cpp
