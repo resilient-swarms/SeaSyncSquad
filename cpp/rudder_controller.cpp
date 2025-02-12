@@ -9,13 +9,13 @@ Rudder_controller::Rudder_controller(Asv_specification asv_spec, Eigen::Vector3d
     this->asv_spec_ = asv_spec;
     this->K = initial_K;
     std::filesystem::path root_dir = std::filesystem::current_path().parent_path();
-    std::filesystem::path out_dir = root_dir/ "results" / "rudder_controller" / "tuning";
-    if (!std::filesystem::exists(out_dir)) {
-        std::filesystem::create_directory(out_dir);
-    }
-    else {
-        throw std::runtime_error("Could not create output directory - " + out_dir.string());
-    }
+    // std::filesystem::path out_dir = root_dir/ "results" / "rudder_controller" / "tuning";
+    // if (!std::filesystem::exists(out_dir)) {
+    //     std::filesystem::create_directory(out_dir);
+    // }
+    // else {
+    //     throw std::runtime_error("Could not create output directory - " + out_dir.string());
+    // }
 }
 
 

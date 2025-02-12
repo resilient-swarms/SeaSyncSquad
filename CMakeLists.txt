@@ -10,9 +10,10 @@ include_directories(
 )
 
 set( SOURCE
+        cpp/disgo_main.cpp
         cpp/disgo.cpp
-        cpp/main.cpp
         cpp/swarm.cpp
+#        cpp/main.cpp
         cpp/radio_attenuation.cpp
         cpp/rudder_controller.cpp
         cpp/netcdf_rain.cpp
