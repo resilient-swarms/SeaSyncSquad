@@ -3,6 +3,7 @@
 #include <fstream>
 #include <algorithm>
 #include <numeric>
+#include <thread>
 extern "C" {
 #include "constants.h"
 }
@@ -53,10 +54,11 @@ Coordinates_3D Disgo::get_new_position(Coordinates_3D current_asv_position, doub
       std::vector<Coordinates_3D> evaluation_positions = get_n_points_around(candidate, search_radius, count_new_positions);
       evaluation_positions.insert(evaluation_positions.begin(), candidate); // Include the current position
 
+      std::mutex vec_mutex;
       std::vector<double> evaluation_values;
 
       // Evaluate each potential new position
-      for (Coordinates_3D& eval_pos : evaluation_positions) {
+      auto thread_worker_function = [&](Coordinates_3D eval_pos) {
         // Create a list of all deployment positions, replacing the candidate position
         std::vector<Coordinates_3D> deployment_locations = remaining_positions;
         deployment_locations.insert(deployment_locations.end(), finalised_positions.begin(), finalised_positions.end());
@@ -73,8 +75,28 @@ Coordinates_3D Disgo::get_new_position(Coordinates_3D current_asv_position, doub
 
         // Compute the optimisation function value for the new configuration
         double value = evaluate_swarm_formation(deployment_locations);
+
+        std::lock_guard<std::mutex> lock(vec_mutex);
         evaluation_values.push_back(value);
+      };
+
+      // Start the threads
+      std::vector<std::thread*> thread_pool;
+      for (Coordinates_3D eval_pos : evaluation_positions) {
+        std::thread* thread_object = new std::thread(thread_worker_function, eval_pos);
+        thread_pool.push_back(thread_object);
       }
+      // Join the threads
+      for(auto thread : thread_pool)
+      {
+        thread->join();
+      }
+      // Free memory
+      for(auto thread : thread_pool)
+      {
+        delete thread;
+      }
+      thread_pool.clear();
 
       // Select the best new position (one with the highest value)
       int best_index = std::distance(evaluation_values.begin(),
