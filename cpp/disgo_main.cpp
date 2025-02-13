@@ -58,7 +58,7 @@ int main() {
     for (int search_iteration = 0; search_iteration < 10; ++search_iteration) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-        std::cout << "[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] " << "Iteration: " << search_iteration << "\n";
+        std::cout << "\n[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] " << "Iteration: " << search_iteration << "\n";
 
         // Environment parameters
         double significant_wave_ht = 3.2; // m
@@ -85,7 +85,7 @@ int main() {
 
         // Current formation value
         double current_formation_value = disgo.evaluate_formation(current_formation);
-        std::cout << "     Current value: " << current_formation_value << "\n";
+        std::cout << "Current value: " << current_formation_value << "\n";
 
         // Compute the new formation
         double search_radius = 100.0; // m
@@ -96,7 +96,7 @@ int main() {
 
         // New formation value
         double new_formation_value = disgo.evaluate_formation(new_formation);
-        std::cout << "     New value: " << new_formation_value << "\n";
+        std::cout << "New value: " << new_formation_value << "\n";
 
         current_and_new_formation_values.push_back(std::make_pair(current_formation_value, new_formation_value));
     }
