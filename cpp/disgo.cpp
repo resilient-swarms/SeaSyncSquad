@@ -101,7 +101,7 @@ std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinat
     std::vector<double> evaluation_values(evaluation_set.size(), 0.0);
 
     // Evaluate each potential new position
-    auto thread_worker_function = [&](int i) {
+    for (int i = 0; i < evaluation_set.size(); i++) {
       std::vector<Coordinates_3D> formation_to_assess = current_formation;
       // Change candidate to eval_pos
       auto it = std::find_if(formation_to_assess.begin(), formation_to_assess.end(),
@@ -116,18 +116,6 @@ std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinat
       evaluation_values[i] = value;
     };
 
-    // Start the threads
-    std::vector<std::thread*> thread_pool;
-    for (int i = 0; i < evaluation_set.size(); i++) {
-      std::thread* thread_object = new std::thread(thread_worker_function, i);
-      thread_pool.push_back(thread_object);
-    }
-    // Join the threads
-    for(auto thread : thread_pool)
-    {
-      thread->join();
-    }
-
     // Select the best new position (one with the highest value)
     std::cout << "Evaluation result: ";
     for (double value : evaluation_values) {
@@ -140,23 +128,15 @@ std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinat
     std::cout << " max value = " << evaluation_values[best_index] << std::endl;
   }
 
-  for (auto& position : proposed_positions_per_vehicle) {
-    std::cout <<position.second << " ";
-  }
-  std::cout << std::endl;
-
   // From all the proposed positions select only one with the best value for the new formation
   auto max_it = std::max_element(proposed_positions_per_vehicle.begin(), proposed_positions_per_vehicle.end(),
                                    [](const auto& a, const auto& b) {
                                        return a.second < b.second;
                                    });
   int best_index = std::distance(proposed_positions_per_vehicle.begin(), max_it);
-  std::cout << "best index = " << best_index << std::endl;
   // New formation
   std::vector<Coordinates_3D> new_formation = current_formation;
   new_formation[best_index] = proposed_positions_per_vehicle[best_index].first;
 
-  double temp = evaluate_formation(new_formation);
-  std::cout<< "value = " << temp << std::endl;
   return new_formation;
 }
