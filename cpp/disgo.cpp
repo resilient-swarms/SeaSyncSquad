@@ -1,6 +1,7 @@
 #include "disgo.h"
+#include "swarm.h"
 #include "radio_attenuation.h"
-#include <fstream>
+#include <iostream>
 #include <algorithm>
 #include <numeric>
 #include <thread>
@@ -9,8 +10,7 @@ extern "C" {
 }
 
 
-Disgo::Disgo(std::vector<Coordinates_3D> swarm_positions, double significant_wave_ht, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss) {
-  this->swarm_positions = swarm_positions;
+Disgo::Disgo(double significant_wave_ht, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss) {
   this->significant_wave_ht = significant_wave_ht;
   this->antenna_height = antenna_height;
   this->radio_frequency = radio_frequency;
@@ -34,99 +34,7 @@ static std::vector<Coordinates_3D> get_n_points_around(Coordinates_3D point, dou
 }
 
 
-Coordinates_3D Disgo::get_new_position(Coordinates_3D current_asv_position, double search_radius) {
-  // Create working copies of swarm positions
-  std::vector<Coordinates_3D> remaining_positions = swarm_positions;
-  std::vector<Coordinates_3D> finalised_positions;
-
-  // Continue until all positions are optimised
-  while (finalised_positions.size() != swarm_positions.size()) {
-    // Candidate positions for remaining positions. Also, these positions compete in the round-robin.
-    // Only the best candidate is pushed to finalised_position.
-    std::vector<Coordinates_3D> candidate_positions;
-    std::vector<double> candidate_values;
-
-    // Iterate over each remaining candidate position
-    for (Coordinates_3D& candidate : remaining_positions) {
-      // Generate possible new positions around the candidate for greedy selection. Only the best evaluation_position
-      // is selected into candidate_positions.
-      int count_new_positions = 10;
-      std::vector<Coordinates_3D> evaluation_positions = get_n_points_around(candidate, search_radius, count_new_positions);
-      evaluation_positions.insert(evaluation_positions.begin(), candidate); // Include the current position
-
-      std::mutex vec_mutex;
-      std::vector<double> evaluation_values;
-
-      // Evaluate each potential new position
-      auto thread_worker_function = [&](Coordinates_3D eval_pos) {
-        // Create a list of all deployment positions, replacing the candidate position
-        std::vector<Coordinates_3D> deployment_locations = remaining_positions;
-        deployment_locations.insert(deployment_locations.end(), finalised_positions.begin(), finalised_positions.end());
-
-        // Remove the candidate's original position...
-        auto it = std::find_if(deployment_locations.begin(), deployment_locations.end(),
-                               [&](const Coordinates_3D& p) { return p.keys.x == candidate.keys.x && p.keys.y == candidate.keys.y; });
-        if (it != deployment_locations.end()) {
-          deployment_locations.erase(it);
-        }
-
-        // ... and instead add the new position which is to be evaluated
-        deployment_locations.push_back(eval_pos);
-
-        // Compute the optimisation function value for the new configuration
-        double value = evaluate_swarm_formation(deployment_locations);
-
-        std::lock_guard<std::mutex> lock(vec_mutex);
-        evaluation_values.push_back(value);
-      };
-
-      // Start the threads
-      std::vector<std::thread*> thread_pool;
-      for (Coordinates_3D eval_pos : evaluation_positions) {
-        std::thread* thread_object = new std::thread(thread_worker_function, eval_pos);
-        thread_pool.push_back(thread_object);
-      }
-      // Join the threads
-      for(auto thread : thread_pool)
-      {
-        thread->join();
-      }
-      // Free memory
-      for(auto thread : thread_pool)
-      {
-        delete thread;
-      }
-      thread_pool.clear();
-
-      // Select the best new position (one with the highest value)
-      int best_index = std::distance(evaluation_values.begin(),
-                                     std::max_element(evaluation_values.begin(), evaluation_values.end()));
-
-      // If the candidate position corresponds to the current ASV position, return its best alternative
-      if (candidate.keys.x == current_asv_position.keys.x && candidate.keys.y == current_asv_position.keys.y) {
-        return evaluation_positions[best_index];
-      } else {
-        candidate_positions.push_back(evaluation_positions[best_index]);
-        candidate_values.push_back(evaluation_values[best_index]);
-      }
-    }
-
-    // Select the best overall candidate position and update the finalised list
-    int best_candidate_index = std::distance(candidate_values.begin(),
-                                             std::max_element(candidate_values.begin(), candidate_values.end()));
-    finalised_positions.push_back(candidate_positions[best_candidate_index]);
-
-    // Remove the selected position from the remaining candidates
-    auto it = std::find_if(remaining_positions.begin(), remaining_positions.end(),
-                           [&](const Coordinates_3D& p) { return p.keys.x == candidate_positions[best_candidate_index].keys.x && p.keys.y == candidate_positions[best_candidate_index].keys.y; });
-    if (it != remaining_positions.end()) {
-      remaining_positions.erase(it);
-    }
-  }
-}
-
-
-double Disgo::evaluate_swarm_formation(const std::vector<Coordinates_3D>& deployment_locations) {
+double Disgo::evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations) {
   // Initialise sea surface
   double wave_dp = PI / 3.0;
   int count_component_waves = 15;
@@ -174,4 +82,81 @@ double Disgo::evaluate_swarm_formation(const std::vector<Coordinates_3D>& deploy
   sea_surface_delete(sea_surface);
 
   return value;
+}
+
+
+std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinates_3D>& current_formation, double search_radius) {
+  std::vector<std::pair<Coordinates_3D, double>> proposed_positions_per_vehicle;
+  for (auto& position : current_formation) {
+    // Generate possible new positions around the candidate for greedy selection.
+    int count_new_positions = 6;
+    std::vector<Coordinates_3D> evaluation_set = get_n_points_around(position, search_radius, count_new_positions);
+    evaluation_set.insert(evaluation_set.begin(), position); // Include the current position
+
+    // Assuming the rest of the swarm positions as not changed, evaluate the positions in the evaluation set to identify
+    // the best new position.
+
+    // Multi-thread the evaluation; one thread per new position to be evaluated.
+    std::mutex vec_mutex;
+    std::vector<double> evaluation_values(evaluation_set.size(), 0.0);
+
+    // Evaluate each potential new position
+    auto thread_worker_function = [&](int i) {
+      std::vector<Coordinates_3D> formation_to_assess = current_formation;
+      // Change candidate to eval_pos
+      auto it = std::find_if(formation_to_assess.begin(), formation_to_assess.end(),
+                                 [&](const Coordinates_3D& p) { return p.keys.x == position.keys.x && p.keys.y == position.keys.y; });
+      int index = std::distance(formation_to_assess.begin(), it);
+      formation_to_assess[index] = evaluation_set[i];
+
+      // Compute the optimisation function value for the new configuration
+      double value = evaluate_formation(formation_to_assess);
+
+      std::lock_guard<std::mutex> lock(vec_mutex);
+      evaluation_values[i] = value;
+    };
+
+    // Start the threads
+    std::vector<std::thread*> thread_pool;
+    for (int i = 0; i < evaluation_set.size(); i++) {
+      std::thread* thread_object = new std::thread(thread_worker_function, i);
+      thread_pool.push_back(thread_object);
+    }
+    // Join the threads
+    for(auto thread : thread_pool)
+    {
+      thread->join();
+    }
+
+    // Select the best new position (one with the highest value)
+    std::cout << "Evaluation result: ";
+    for (double value : evaluation_values) {
+      std::cout << value << " ";
+    }
+    int best_index = std::distance(evaluation_values.begin(),
+                                   std::max_element(evaluation_values.begin(), evaluation_values.end()));
+    std::pair<Coordinates_3D, double> best_position(evaluation_set[best_index], evaluation_values[best_index]);
+    proposed_positions_per_vehicle.push_back(best_position);
+    std::cout << " max value = " << evaluation_values[best_index] << std::endl;
+  }
+
+  for (auto& position : proposed_positions_per_vehicle) {
+    std::cout <<position.second << " ";
+  }
+  std::cout << std::endl;
+
+  // From all the proposed positions select only one with the best value for the new formation
+  auto max_it = std::max_element(proposed_positions_per_vehicle.begin(), proposed_positions_per_vehicle.end(),
+                                   [](const auto& a, const auto& b) {
+                                       return a.second < b.second;
+                                   });
+  int best_index = std::distance(proposed_positions_per_vehicle.begin(), max_it);
+  std::cout << "best index = " << best_index << std::endl;
+  // New formation
+  std::vector<Coordinates_3D> new_formation = current_formation;
+  new_formation[best_index] = proposed_positions_per_vehicle[best_index].first;
+
+  double temp = evaluate_formation(new_formation);
+  std::cout<< "value = " << temp << std::endl;
+  return new_formation;
 }

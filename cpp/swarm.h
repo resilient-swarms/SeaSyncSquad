@@ -46,7 +46,7 @@ private:
     double radio_attenuation_threshold; // dB
     double free_space_radio_range; // m
     int swarm_size;
-    double simulation_time = 5.0 * 60.0; // seconds
+    double simulation_time = 2.0 * 60.0; // seconds
     double simulation_time_step_size = 40.0; // milli-sec
     Graph graph;
     std::string scenario_name;
