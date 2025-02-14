@@ -346,7 +346,7 @@ int main() {
                 // Init swarm
                 double fspl_design = get_free_space_path_loss(frequency, distance); // dB
                 double environmental_excess_loss = 20.0; // dB
-                Swarm swarm(asvs, sea_surface, ant_ht, frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss, results_dir, scenario_name);
+                Swarm swarm(asvs, sea_surface, ant_ht, frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);
                 // Create ASV pairs
                 for (int i = 0; i < asvs.size(); ++i) {
                     for (int j = i+1; j < asvs.size(); ++j) {
@@ -357,7 +357,7 @@ int main() {
                     }
                 }
                 // Run simulation
-                swarm.run_simulation();
+                swarm.run_simulation(results_dir, scenario_name);
                 // Clean heap
                 for (Asv* asv : swarm.get_asvs()) {
                     asv_delete(asv);

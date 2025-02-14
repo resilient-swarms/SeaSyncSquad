@@ -29,28 +29,26 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 
 class Swarm {
 public:
-    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss);
-    Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name);
+    Swarm(const std::vector<Asv*>& asvs, const Sea_surface* sea_surface, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
     void set_comms_link(std::pair<Asv*, Asv*> comms_link);
+    double run_simulation(const std::filesystem::path& results_dir, const std::string& scenario_name);
     double run_simulation();
     std::vector<Asv*> get_asvs();
 
 private:
-    double antenna_height; // m
-    double radio_frequency; // Hz
-    double rainfall_rate; // mm/hr
-    double wind_speed; // m/s
-    Sea_surface* sea_surface;
-    double fspl_design; // Design free space path loss (dB)
-    double environmental_excess_loss; // Excess radio loss due to environment (dB)
+    const double antenna_height; // m
+    const double radio_frequency; // Hz
+    const double rainfall_rate; // mm/hr
+    const double wind_speed; // m/s
+    const Sea_surface* sea_surface;
+    const double fspl_design; // Design free space path loss (dB)
+    const double environmental_excess_loss; // Excess radio loss due to environment (dB)
+    const int swarm_size;
+    const double simulation_time = 2.0 * 60.0; // seconds
+    const double simulation_time_step_size = 40.0; // milli-sec
     double radio_attenuation_threshold; // dB
     double free_space_radio_range; // m
-    int swarm_size;
-    double simulation_time = 2.0 * 60.0; // seconds
-    double simulation_time_step_size = 40.0; // milli-sec
     Graph graph;
-    std::string scenario_name;
-    std::filesystem::path results_dir;
     bool print_to_dir;
 };
 

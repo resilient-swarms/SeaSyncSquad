@@ -28,18 +28,18 @@ struct EdgeFilter {
     }
 };
 
-Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss) {
-    this->sea_surface = sea_surface;
-    this->antenna_height = antenna_height;
-    this->radio_frequency = radio_frequency;
-    this->rainfall_rate = rainfall_rate;
-    this->wind_speed = wind_speed;
-    this->fspl_design = fspl_design;
-    this->environmental_excess_loss = environmental_excess_loss;
-    print_to_dir = false;
+Swarm::Swarm(const std::vector<Asv*>& asvs, const Sea_surface* sea_surface, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss) :
+    swarm_size(asvs.size()),
+    sea_surface(sea_surface),
+    antenna_height(antenna_height),
+    radio_frequency(radio_frequency),
+    rainfall_rate(rainfall_rate),
+    wind_speed(wind_speed),
+    fspl_design(fspl_design),
+    environmental_excess_loss(environmental_excess_loss),
+    print_to_dir(true) {
     radio_attenuation_threshold = fspl_design + environmental_excess_loss;
     free_space_radio_range = std::pow(10.0, (fspl_design - 32.4) / 20.0 - std::log10(radio_frequency/1'000'000.0)) * 1000.0; // m
-    swarm_size = asvs.size();
     // Create graph vertices
     for (auto asv : asvs) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
@@ -55,13 +55,6 @@ Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_he
     }
 }
 
-
-Swarm::Swarm(std::vector<Asv*> asvs, Sea_surface* sea_surface, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss, std::filesystem::path results_dir, std::string scenario_name) {
-    Swarm(asvs, sea_surface, antenna_height, radio_frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);
-    this->results_dir = results_dir;
-    this->scenario_name = scenario_name;
-    print_to_dir = true;
-}
 
 void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
     auto find_vertex = [&](const Asv* asv) -> Graph::vertex_descriptor {
@@ -82,14 +75,25 @@ void Swarm::set_comms_link(std::pair<Asv*, Asv*> comms_link) {
 }
 
 double Swarm::run_simulation() {
+    print_to_dir = false;
+    std::filesystem::path root_dir = std::filesystem::current_path().parent_path();
+    std::filesystem::path temp_dir = root_dir/"temp";
+    std::string scenario_name = "temp";
+    double value = run_simulation(temp_dir, scenario_name);
+    return value;
+}
+
+double Swarm::run_simulation(const std::filesystem::path& results_dir, const std::string& scenario_name) {
     double spatial_connectivity_index; // return value
 
     // Open files to write simulation results
-    std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
-    std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
-    std::ofstream comms_result_file(comms_result_file_path); // write results to file
-    std::ofstream graph_result_file(graph_result_file_path); // write results to file
+    std::ofstream comms_result_file;
+    std::ofstream graph_result_file;
     if (print_to_dir) {
+        std::filesystem::path comms_result_file_path = results_dir/("comms_result_" + scenario_name + ".csv");
+        std::filesystem::path graph_result_file_path = results_dir/("graph_result_" + scenario_name + ".csv");
+        std::ofstream comms_result_file(comms_result_file_path); // write results to file
+        std::ofstream graph_result_file(graph_result_file_path); // write results to file
         comms_result_file << "time(sec),x1(m),y1(m),x2(m),y2(m),distance(m),sig_wave_ht(m),wind_speed(km/hr),rainfall(mm/hr),ant_ht(m),radio_freq(MHz),free_space_path_loss(dB),diffraction_loss(dB),fresnel_clearance(%),rain_attenuation(dB),sea_spray_attenuation(dB)" << std::endl;
         graph_result_file << "time(sec),mean_edge_length(m),free_space_radio_range(m),fspl_design(dB),mean_free_space_path_loss(dB),mean_rain_attenuation(dB),mean_sea_spray_attenuation(dB),mean_diffraction_loss(dB),mean_signal_attenuation(dB),mean_degree,density,num_components,dispersion_index,dispersion_shape_index,spatial_connectivity_index" << std::endl;
     }
@@ -131,11 +135,11 @@ double Swarm::run_simulation() {
             double rain_attenuation = get_rain_attenuation(radio_frequency, d, polarisation, rainfall_rate);
             graph[edge].rain_attenuation = rain_attenuation;
             // Calculate sea spray attenuation
-            double sea_spray_attenuation = get_sea_spray_attenuation(radio_frequency, d, sea_surface, wind_speed);
+            double sea_spray_attenuation = get_sea_spray_attenuation(radio_frequency, d, const_cast<Sea_surface *>(sea_surface), wind_speed);
             graph[edge].sea_spray_attenuation = sea_spray_attenuation;
             // Calculate diffractino loss
             std::pair<Coordinates_3D, Coordinates_3D> antenna_positions = std::make_pair(p1, p2);
-            std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, d, sea_surface, antenna_positions, time, simulation_time_step_size);
+            std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, d, const_cast<Sea_surface *>(sea_surface), antenna_positions, time, simulation_time_step_size);
             graph[edge].fresnel_clearance = min_fresnel_clearance_and_diffraction_loss.first;
             graph[edge].diffraction_loss = min_fresnel_clearance_and_diffraction_loss.second;
             // Calculate total loss
