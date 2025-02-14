@@ -21,8 +21,11 @@ Disgo::Disgo(const double significant_wave_ht, const double antenna_height, cons
 }
 
 
-std::vector<Coordinates_3D> Disgo::get_n_points_around(const Coordinates_3D& point, const double radius, const int n) {
+std::vector<Coordinates_3D> Disgo::get_uniform_points_on_circle(const Coordinates_3D& point, const double radius, const int n) const {
   std::vector<Coordinates_3D> points;
+  points.reserve(n+1);
+  // Insert the centre into points
+  points.push_back(point);
   for (int i = 0; i < n ; ++i) {
     double angle = i*(2.0*PI)/n;
     double x = point.keys.x + (radius * std::cos(angle));
@@ -34,26 +37,27 @@ std::vector<Coordinates_3D> Disgo::get_n_points_around(const Coordinates_3D& poi
 }
 
 
-double Disgo::evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations) {
+double Disgo::evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations) const {
   // Initialise sea surface
-  double wave_dp = PI / 3.0;
-  int count_component_waves = 15;
-  int wave_rand_seed = 1;
+  const double wave_dp = PI / 3.0;
+  const int count_component_waves = 9;
+  const int wave_rand_seed = 1;
   Sea_surface* sea_surface = sea_surface_new(significant_wave_ht, wave_dp, wave_rand_seed, count_component_waves);
 
   // Define ASV specifications
-  Asv_specification asv_spec;
-  asv_spec.L_wl = 2.1; // m
-  asv_spec.B_wl = 0.6; // m
-  asv_spec.D = 0.25; // m
-  asv_spec.T = 0.09; // m
-  asv_spec.max_speed = 4.0; // m/s
-  asv_spec.disp = 0.09; // m3
-  asv_spec.r_roll = 0.2; // m
-  asv_spec.r_pitch = 0.6; // m
-  asv_spec.r_yaw = 0.06; // m
-  asv_spec.cog = {1.05, 0.0, -0.2}; // {m, m, m}
-  bool is_surge_sway_halt_set = true;
+  const Asv_specification asv_spec{
+  .L_wl = 2.1, // m
+  .B_wl = 0.6, // m
+  .D = 0.25, // m
+  .T = 0.09, // m
+  .max_speed = 4.0, // m/s
+  .disp = 0.09, // m3
+  .r_roll = 0.2, // m
+  .r_pitch = 0.6, // m
+  .r_yaw = 0.06, // m
+  .cog = {1.05, 0.0, -0.2}, // {m, m, m}
+  };
+  const bool is_surge_sway_halt_set = true;
 
   // Initialise ASVs at the deployment locations
   std::vector<Asv*> asvs;
@@ -85,13 +89,12 @@ double Disgo::evaluate_formation(const std::vector<Coordinates_3D>& deployment_l
 }
 
 
-std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinates_3D>& current_formation, double search_radius) {
+std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinates_3D>& current_formation, double search_radius) const {
   std::vector<std::pair<Coordinates_3D, double>> proposed_positions_per_vehicle;
-  for (auto& position : current_formation) {
+  for (const Coordinates_3D& position : current_formation) {
     // Generate possible new positions around the candidate for greedy selection.
     int count_new_positions = 10;
-    std::vector<Coordinates_3D> evaluation_set = get_n_points_around(position, search_radius, count_new_positions);
-    evaluation_set.insert(evaluation_set.begin(), position); // Include the current position
+    const std::vector<Coordinates_3D> evaluation_set = get_uniform_points_on_circle(position, search_radius, count_new_positions);
 
     // Assuming the rest of the swarm positions as not changed, evaluate the positions in the evaluation set to identify
     // the best new position.

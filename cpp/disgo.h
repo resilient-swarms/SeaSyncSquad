@@ -26,11 +26,11 @@ extern "C" {
 class Disgo {
 public:
     Disgo(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
-    std::vector<Coordinates_3D> get_new_formation(const std::vector<Coordinates_3D>& current_formation, const double search_radius);
-    double evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations);
+    std::vector<Coordinates_3D> get_new_formation(const std::vector<Coordinates_3D>& current_formation, const double search_radius) const;
+    double evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations) const;
 
 private:
-    std::vector<Coordinates_3D> get_n_points_around(const Coordinates_3D& point, const double radius, const int n);
+    std::vector<Coordinates_3D> get_uniform_points_on_circle(const Coordinates_3D& point, const double radius, const int n) const;
 
 private:
     const double antenna_height; // m
