@@ -25,18 +25,21 @@ extern "C" {
 
 class Disgo {
 public:
-    Disgo(double significant_wave_ht, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss);
-    std::vector<Coordinates_3D> get_new_formation(const std::vector<Coordinates_3D>& current_formation, double search_radius);
+    Disgo(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
+    std::vector<Coordinates_3D> get_new_formation(const std::vector<Coordinates_3D>& current_formation, const double search_radius);
     double evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations);
 
 private:
-    double antenna_height; // m
-    double radio_frequency; // Hz
-    double rainfall_rate; // mm/hr
-    double wind_speed; // m/s
-    double significant_wave_ht; // m
-    double fspl_design; // Design free space path loss (dB)
-    double environmental_excess_loss; // Excess radio loss due to environment (dB)
+    std::vector<Coordinates_3D> get_n_points_around(const Coordinates_3D& point, const double radius, const int n);
+
+private:
+    const double antenna_height; // m
+    const double radio_frequency; // Hz
+    const double rainfall_rate; // mm/hr
+    const double wind_speed; // m/s
+    const double significant_wave_ht; // m
+    const double fspl_design; // Design free space path loss (dB)
+    const double environmental_excess_loss; // Excess radio loss due to environment (dB)
 };
 
 

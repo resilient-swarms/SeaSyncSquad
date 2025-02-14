@@ -243,7 +243,7 @@ int main() {
     std::cout<<"Hardware concurrency = "<<max_pool_size<<"\n";
     int jobs_start_index = 0;
     int jobs_end_index = 0;
-    int count_total_scenarios = distances.size();
+    size_t count_total_scenarios = distances.size();
     while(jobs_end_index < count_total_scenarios) {
         std::cout<<std::endl;
         int count_jobs_remaining = count_total_scenarios - jobs_end_index;
@@ -348,8 +348,8 @@ int main() {
                 double environmental_excess_loss = 20.0; // dB
                 Swarm swarm(asvs, sea_surface, ant_ht, frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);
                 // Create ASV pairs
-                for (int i = 0; i < asvs.size(); ++i) {
-                    for (int j = i+1; j < asvs.size(); ++j) {
+                for (size_t i = 0; i < asvs.size(); ++i) {
+                    for (size_t j = i+1; j < asvs.size(); ++j) {
                         std::pair<Asv*, Asv*> comms_pair;
                         comms_pair.first  = asvs[i];
                         comms_pair.second = asvs[j];

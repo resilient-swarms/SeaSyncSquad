@@ -90,7 +90,7 @@ int main() {
         // Compute the new formation
         double search_radius = 10.0; // m
         std::vector<Coordinates_3D> new_formation = disgo.get_new_formation(current_formation, search_radius);
-        for (int i = 0; i < new_formation.size(); ++i) {
+        for (size_t i = 0; i < new_formation.size(); ++i) {
             asvs[i].path.push_back(new_formation[i]);
         }
 

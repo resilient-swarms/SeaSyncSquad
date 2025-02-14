@@ -10,18 +10,18 @@ extern "C" {
 }
 
 
-Disgo::Disgo(double significant_wave_ht, double antenna_height, double radio_frequency, double rainfall_rate, double wind_speed, double fspl_design, double environmental_excess_loss) {
-  this->significant_wave_ht = significant_wave_ht;
-  this->antenna_height = antenna_height;
-  this->radio_frequency = radio_frequency;
-  this->rainfall_rate = rainfall_rate;
-  this->wind_speed = wind_speed;
-  this->fspl_design = fspl_design;
-  this->environmental_excess_loss = environmental_excess_loss;
+Disgo::Disgo(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss) :
+  significant_wave_ht(significant_wave_ht),
+  antenna_height(antenna_height),
+  radio_frequency(radio_frequency),
+  rainfall_rate(rainfall_rate),
+  wind_speed(wind_speed),
+  fspl_design(fspl_design),
+  environmental_excess_loss(environmental_excess_loss) {
 }
 
 
-static std::vector<Coordinates_3D> get_n_points_around(Coordinates_3D point, double radius, int n) {
+std::vector<Coordinates_3D> Disgo::get_n_points_around(const Coordinates_3D& point, const double radius, const int n) {
   std::vector<Coordinates_3D> points;
   for (int i = 0; i < n ; ++i) {
     double angle = i*(2.0*PI)/n;
@@ -57,7 +57,7 @@ double Disgo::evaluate_formation(const std::vector<Coordinates_3D>& deployment_l
 
   // Initialise ASVs at the deployment locations
   std::vector<Asv*> asvs;
-  union Coordinates_3D attitude = {0.0, 0.0, 0.0};
+  Coordinates_3D attitude = {0.0, 0.0, 0.0};
   for (const auto& loc : deployment_locations) {
     Asv* asv = asv_new(asv_spec, sea_surface, loc, attitude);
     asv_set_surge_sway_halt(asv, is_surge_sway_halt_set);

@@ -43,7 +43,7 @@ private:
     const Sea_surface* sea_surface;
     const double fspl_design; // Design free space path loss (dB)
     const double environmental_excess_loss; // Excess radio loss due to environment (dB)
-    const int swarm_size;
+    const size_t swarm_size;
     const double simulation_time = 2.0 * 60.0; // seconds
     const double simulation_time_step_size = 40.0; // milli-sec
     double radio_attenuation_threshold; // dB
