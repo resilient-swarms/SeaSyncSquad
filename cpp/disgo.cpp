@@ -89,7 +89,7 @@ std::vector<Coordinates_3D> Disgo::get_new_formation(const std::vector<Coordinat
   std::vector<std::pair<Coordinates_3D, double>> proposed_positions_per_vehicle;
   for (auto& position : current_formation) {
     // Generate possible new positions around the candidate for greedy selection.
-    int count_new_positions = 6;
+    int count_new_positions = 10;
     std::vector<Coordinates_3D> evaluation_set = get_n_points_around(position, search_radius, count_new_positions);
     evaluation_set.insert(evaluation_set.begin(), position); // Include the current position
 

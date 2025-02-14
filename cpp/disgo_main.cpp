@@ -37,9 +37,9 @@ int main() {
 
     // ASV deployment locations
     std::vector<Coordinates_3D> deployment_locations = {
-        {4000, 6000, 0}, {5000, 6000, 0}, {6000, 6000, 0},
-        {4000, 5000, 0}, {5000, 5000, 0}, {6000, 5000, 0},
-        {4000, 4000, 0}, {5000, 4000, 0}, {6000, 4000, 0}
+        {-1000, 1000, 0}, {0, 1000, 0}, {1000, 1000, 0},
+        {-1000, 0, 0}, {0, 0, 0}, {1000, 0, 0},
+        {-1000, -1000, 0}, {0, -1000, 0}, {1000, -1000, 0}
     };
 
     // Initialize formation
@@ -55,7 +55,7 @@ int main() {
     std::vector<std::pair<double, double>> current_and_new_formation_values;
 
     // Simulation parameters
-    for (int search_iteration = 0; search_iteration < 10; ++search_iteration) {
+    for (int search_iteration = 0; search_iteration < 100; ++search_iteration) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::cout << "\n[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] " << "Iteration: " << search_iteration << "\n";
@@ -88,7 +88,7 @@ int main() {
         std::cout << "Current value: " << current_formation_value << "\n";
 
         // Compute the new formation
-        double search_radius = 100.0; // m
+        double search_radius = 10.0; // m
         std::vector<Coordinates_3D> new_formation = disgo.get_new_formation(current_formation, search_radius);
         for (int i = 0; i < new_formation.size(); ++i) {
             asvs[i].path.push_back(new_formation[i]);
