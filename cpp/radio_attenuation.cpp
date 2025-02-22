@@ -221,7 +221,7 @@ std::vector<std::pair<double, double>> generate_fresnel_zone(double radio_freque
 }
 
 
-std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(double radio_frequency, double antenna_height, double communication_distance, Sea_surface* sea, std::pair<Coordinates_3D, Coordinates_3D> antenna_positions, double time, double time_step_size ) {
+std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(double radio_frequency, double antenna_height, double communication_distance, Sea_surface* sea, std::pair<Coordinates_3D, Coordinates_3D> antenna_positions, double time) {
     // Ref: ITU-R P.526-15 Section 4.5 and 4.1
 
     union Coordinates_3D p1 = antenna_positions.first;

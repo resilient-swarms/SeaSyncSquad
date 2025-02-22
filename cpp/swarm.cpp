@@ -104,10 +104,10 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
     // Run till end of simulation time
     for(double time = 0; time < simulation_time; time += simulation_time_step_size/1000.0) {
         // Update the dynamics for all asvs
-        for (auto v : boost::make_iterator_range(boost::vertices(graph))) {
-            Asv* asv = graph[v].asv;
-            wave_glider_compute_dynamics(asv, rudder_angle, simulation_time_step_size);
-        }
+        // for (auto v : boost::make_iterator_range(boost::vertices(graph))) {
+        //     Asv* asv = graph[v].asv;
+        //     wave_glider_compute_dynamics(asv, rudder_angle, simulation_time_step_size);
+        // }
 
         // For each edge of the graph, compute the radio attenuation
         for (auto edge : boost::make_iterator_range(boost::edges(graph))) {
@@ -139,7 +139,7 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
             graph[edge].sea_spray_attenuation = sea_spray_attenuation;
             // Calculate diffractino loss
             std::pair<Coordinates_3D, Coordinates_3D> antenna_positions = std::make_pair(p1, p2);
-            std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, d, const_cast<Sea_surface *>(sea_surface), antenna_positions, time, simulation_time_step_size);
+            std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, d, const_cast<Sea_surface *>(sea_surface), antenna_positions, time);
             graph[edge].fresnel_clearance = min_fresnel_clearance_and_diffraction_loss.first;
             graph[edge].diffraction_loss = min_fresnel_clearance_and_diffraction_loss.second;
             // Calculate total loss

@@ -49,12 +49,11 @@ double get_sea_spray_attenuation(double radio_frequency, double communication_di
  * @param sea surface instance.
  * @param antenna_positions.
  * @param time from the start of simulation in sec.
- * @param time_step_size of simulation in milli-sec.
  * @return (1) minimum fresnel clearance in % and (2) loss in dB.
  */
 std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(double radio_frequency, double antenna_height,
                                                                         double communication_distance,
                                                                         Sea_surface* sea,
                                                                         std::pair<Coordinates_3D, Coordinates_3D> antenna_positions,
-                                                                        double time, double time_step_size );
+                                                                        double time);
 #endif //RADIO_ATTENUATION_H
