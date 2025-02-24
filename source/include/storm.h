@@ -1,5 +1,4 @@
-#ifndef STORM_H
-#define STORM_H
+#pragma once
 
 #include <filesystem>
 #include <string>
@@ -23,4 +22,3 @@ private:
     bool is_storm_initialised = false;
 };
 
-#endif //STORM_H

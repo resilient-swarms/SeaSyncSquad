@@ -1,5 +1,4 @@
-#ifndef NETCDF_WIND_H
-#define NETCDF_WIND_H
+#pragma once
 
 #include <filesystem>
 #include <vector>
@@ -25,5 +24,3 @@ private:
 };
 
 
-
-#endif //NETCDF_WIND_H

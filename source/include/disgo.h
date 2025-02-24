@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * Decentralised Iterative System-wide Greedy Optimisation (DISGO)
  * Acronym Breakdown:
@@ -10,27 +12,20 @@
  */
 
 
-#ifndef DISGO_H
-#define DISGO_H
-
 #include <vector>
-
-extern "C" {
-#include "geometry.h"
-#include "sea_surface.h"
-#include "asv.h"
-}
-
+#include "ASVLite/geometry.h"
+#include "ASVLite/sea_surface.h"
+#include "ASVLite/asv.h"
 
 
 class Disgo {
 public:
     Disgo(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
-    std::vector<Coordinates_3D> get_new_formation(const std::vector<Coordinates_3D>& current_formation, const double search_radius) const;
-    double evaluate_formation(const std::vector<Coordinates_3D>& deployment_locations) const;
+    std::vector<ASVLite::Geometry::Coordinates3D> get_new_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& current_formation, const double search_radius) const;
+    double evaluate_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& deployment_locations) const;
 
 private:
-    std::vector<Coordinates_3D> get_uniform_points_on_circle(const Coordinates_3D& point, const double radius, const int n) const;
+    std::vector<ASVLite::Geometry::Coordinates3D> get_uniform_points_on_circle(const ASVLite::Geometry::Coordinates3D& point, const double radius, const int n) const;
 
 private:
     const double antenna_height; // m
@@ -42,6 +37,3 @@ private:
     const double environmental_excess_loss; // Excess radio loss due to environment (dB)
 };
 
-
-
-#endif //DISGO_H

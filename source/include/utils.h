@@ -1,9 +1,6 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
-extern "C" {
-#include "geometry.h"
-}
+#include "ASVLite/geometry.h"
 #include <string>
 #include <vector>
 #include <ctime>
@@ -31,12 +28,12 @@ class Geo_coordinate_converter {
     /**
     * Converts geodetic to cartesian coordinate.
     */
-    Coordinates_3D convert(Geo_coordinate coordinate);
+    ASVLite::Geometry::Coordinates3D convert(Geo_coordinate coordinate);
 
     /**
     * Convert cartesian to geodetic coordinate.
     */
-    Geo_coordinate convert(Coordinates_3D coordinate);
+    Geo_coordinate convert(ASVLite::Geometry::Coordinates3D coordinate);
 
     private:
     Geo_coordinate reference_coordinate;
@@ -59,4 +56,3 @@ std::time_t string_to_time(std::string s);
 std::string time_to_string(time_t t);
 
 
-#endif //UTILS_H

@@ -1,5 +1,4 @@
-#ifndef NETCDF_RAIN_H
-#define NETCDF_RAIN_H
+#pragma once
 
 #include <filesystem>
 #include <vector>
@@ -23,5 +22,3 @@ private:
 };
 
 
-
-#endif //NETCDF_RAIN_H

@@ -4,29 +4,26 @@ project(SeaSyncSquad)
 set(CMAKE_CXX_STANDARD 20)
 
 include_directories(
-        dependency/ASVLite/include
+        source/include
+        dependency/ASVLite/cpp_current/include
         dependency/netcdf-cxx4/cxx4
         dependency/matplotlib-cpp
 )
 
 set( SOURCE
-        cpp/disgo_main.cpp
-        cpp/disgo.cpp
-        cpp/swarm.cpp
-#        cpp/main.cpp
-        cpp/radio_attenuation.cpp
-        cpp/rudder_controller.cpp
-        cpp/netcdf_rain.cpp
-        cpp/netcdf_wave.cpp
-        cpp/netcdf_wind.cpp
-        cpp/storm.cpp
-        cpp/utils.cpp
-        dependency/ASVLite/source/errors.c
-        dependency/ASVLite/source/geometry.c
-        dependency/ASVLite/source/regular_wave.c
-        dependency/ASVLite/source/sea_surface.c
-        dependency/ASVLite/source/asv.c
-
+        dependency/ASVLite/cpp_current/source/geometry.cpp
+        dependency/ASVLite/cpp_current/source/regular_wave.cpp
+        dependency/ASVLite/cpp_current/source/sea_surface.cpp
+        dependency/ASVLite/cpp_current/source/asv.cpp
+        source/source/netcdf_rain.cpp 
+        source/source/netcdf_wave.cpp 
+        source/source/netcdf_wind.cpp 
+        source/source/storm.cpp
+        source/source/utils.cpp
+        source/source/radio_attenuation.cpp
+        source/source/swarm.cpp
+        source/source/disgo.cpp
+        source/source/disgo_main.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})

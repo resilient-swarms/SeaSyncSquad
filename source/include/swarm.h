@@ -1,16 +1,13 @@
-#ifndef SWARM_H
-#define SWARM_H
+#pragma once 
+
 #include <vector>
 #include <boost/graph/adjacency_list.hpp>
 #include <filesystem>
-
-extern "C" {
-#include "sea_surface.h"
-#include "asv.h"
-}
+#include "ASVLite/sea_surface.h"
+#include "ASVLite/asv.h"
 
 struct VertexProperties {
-    Asv* asv;
+    ASVLite::Geometry::Coordinates3D position;
     double radio_attenuation_threshold; // dB
 };
 
@@ -29,18 +26,25 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 
 class Swarm {
 public:
-    Swarm(const std::vector<Asv*>& asvs, const Sea_surface* sea_surface, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
-    void set_comms_link(std::pair<Asv*, Asv*> comms_link);
+    Swarm(const std::vector<ASVLite::Geometry::Coordinates3D>& positions, 
+          const ASVLite::SeaSurface& sea_surface, 
+          const double antenna_height, 
+          const double radio_frequency, 
+          const double rainfall_rate, 
+          const double wind_speed, 
+          const double fspl_design, 
+          const double environmental_excess_loss);
+
+    void set_comms_link(const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D> antenna_pair);
     double run_simulation(const std::filesystem::path& results_dir, const std::string& scenario_name);
     double run_simulation();
-    std::vector<Asv*> get_asvs();
 
 private:
     const double antenna_height; // m
     const double radio_frequency; // Hz
     const double rainfall_rate; // mm/hr
     const double wind_speed; // m/s
-    const Sea_surface* sea_surface;
+    const ASVLite::SeaSurface& sea_surface;
     const double fspl_design; // Design free space path loss (dB)
     const double environmental_excess_loss; // Excess radio loss due to environment (dB)
     const size_t swarm_size;
@@ -52,6 +56,3 @@ private:
     bool print_to_dir;
 };
 
-
-
-#endif //SWARM_H

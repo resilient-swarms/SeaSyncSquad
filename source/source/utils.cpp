@@ -42,8 +42,8 @@ reference_coordinate(reference_coordinate) {
     proj = GeographicLib::LocalCartesian(reference_coordinate.latitude, reference_coordinate.longitude, h0);
 }
 
-Coordinates_3D Geo_coordinate_converter::convert(Geo_coordinate coordinate) {
-    Coordinates_3D result {0.0, 0.0, 0.0};
+ASVLite::Geometry::Coordinates3D Geo_coordinate_converter::convert(Geo_coordinate coordinate) {
+    ASVLite::Geometry::Coordinates3D result {0.0, 0.0, 0.0};
     // Convert to local cartesian coordinates
     double h = 0.0;
     proj.Forward(coordinate.latitude,
@@ -52,7 +52,7 @@ Coordinates_3D Geo_coordinate_converter::convert(Geo_coordinate coordinate) {
     return result;
 }
 
-Geo_coordinate Geo_coordinate_converter::convert(Coordinates_3D coordinate) {
+Geo_coordinate Geo_coordinate_converter::convert(ASVLite::Geometry::Coordinates3D coordinate) {
     Geo_coordinate result;
     // Convert to geodetic coordinates
     double z = 0.0;

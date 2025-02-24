@@ -1,5 +1,4 @@
 #include "disgo.h"
-#include "rudder_controller.h"
 #include "utils.h"
 #include "radio_attenuation.h"
 #include <utility>
@@ -14,12 +13,9 @@
 #include <chrono>
 #include <iomanip>
 
-extern "C" {
-#include "constants.h"
-}
 
 struct AsvNavigation {
-    std::vector<Coordinates_3D> path;
+    std::vector<ASVLite::Geometry::Coordinates3D> path;
 };
 
 int main() {
@@ -36,7 +32,7 @@ int main() {
     }
 
     // ASV deployment locations
-    std::vector<Coordinates_3D> deployment_locations = {
+    std::vector<ASVLite::Geometry::Coordinates3D> deployment_locations = {
         {-1000, 1000, 0}, {0, 1000, 0}, {1000, 1000, 0},
         {-1000, 0, 0}, {0, 0, 0}, {1000, 0, 0},
         {-1000, -1000, 0}, {0, -1000, 0}, {1000, -1000, 0}
@@ -71,7 +67,7 @@ int main() {
         double environmental_excess_loss = 20.0; // dB
 
         // Collect current swarm formation
-        std::vector<Coordinates_3D> current_formation;
+        std::vector<ASVLite::Geometry::Coordinates3D> current_formation;
         current_formation.reserve(asvs.size());
 
         for (const auto& asv : asvs) {
@@ -89,7 +85,7 @@ int main() {
 
         // Compute the new formation
         double search_radius = 10.0; // m
-        std::vector<Coordinates_3D> new_formation = disgo.get_new_formation(current_formation, search_radius);
+        std::vector<ASVLite::Geometry::Coordinates3D> new_formation = disgo.get_new_formation(current_formation, search_radius);
         for (size_t i = 0; i < new_formation.size(); ++i) {
             asvs[i].path.push_back(new_formation[i]);
         }

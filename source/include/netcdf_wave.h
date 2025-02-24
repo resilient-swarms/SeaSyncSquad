@@ -1,5 +1,4 @@
-#ifndef NETCDF_WAVE_H
-#define NETCDF_WAVE_H
+#pragma once
 
 #include <filesystem>
 #include <vector>
@@ -24,5 +23,3 @@ private:
 };
 
 
-
-#endif //NETCDF_WAVE_H
