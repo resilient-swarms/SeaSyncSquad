@@ -1,14 +1,7 @@
 #pragma once
 
 /**
- * Decentralised Iterative System-wide Greedy Optimisation (DISGO)
- * Acronym Breakdown:
- * Letter	Term	        Role in the Method
- *   D	    Decentralised	Agents operate independently with no central authority.
- *   I	    Iterative	    Sequential, round-robin updates until convergence.
- *   S	    System-wide	    Each agent evaluates hypothetical moves for all swarm members (holistic planning).
- *   G	    Greedy	        Selects the best immediate improvement at each step.
- *   O	    Optimisation	Explicit focus on maximising spatial spread while maintaining connectivity.
+ * Iterative Coordinate-wise Greedy Search (ICGS)
  */
 
 
@@ -18,9 +11,9 @@
 #include "ASVLite/asv.h"
 
 
-class Disgo {
+class ICGS {
 public:
-    Disgo(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
+    ICGS(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss);
     std::vector<ASVLite::Geometry::Coordinates3D> get_new_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& current_formation, const double search_radius) const;
     double evaluate_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& deployment_locations) const;
 

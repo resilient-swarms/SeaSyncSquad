@@ -1,4 +1,4 @@
-#include "disgo.h"
+#include "icgs.h"
 #include "swarm.h"
 #include "radio_attenuation.h"
 #include <iostream>
@@ -7,7 +7,7 @@
 #include <thread>
 
 
-Disgo::Disgo(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss) :
+ICGS::ICGS(const double significant_wave_ht, const double antenna_height, const double radio_frequency, const double rainfall_rate, const double wind_speed, const double fspl_design, const double environmental_excess_loss) :
   significant_wave_ht(significant_wave_ht),
   antenna_height(antenna_height),
   radio_frequency(radio_frequency),
@@ -18,7 +18,7 @@ Disgo::Disgo(const double significant_wave_ht, const double antenna_height, cons
 }
 
 
-std::vector<ASVLite::Geometry::Coordinates3D> Disgo::get_uniform_points_on_circle(const ASVLite::Geometry::Coordinates3D& point, const double radius, const int n) const {
+std::vector<ASVLite::Geometry::Coordinates3D> ICGS::get_uniform_points_on_circle(const ASVLite::Geometry::Coordinates3D& point, const double radius, const int n) const {
   std::vector<ASVLite::Geometry::Coordinates3D> points;
   points.reserve(n+1);
   // Insert the centre into points
@@ -34,7 +34,7 @@ std::vector<ASVLite::Geometry::Coordinates3D> Disgo::get_uniform_points_on_circl
 }
 
 
-double Disgo::evaluate_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& deployment_locations) const {
+double ICGS::evaluate_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& deployment_locations) const {
   // Initialise sea surface
   const double wave_dp = M_PI / 3.0;
   const int count_component_waves = 9;
@@ -56,7 +56,7 @@ double Disgo::evaluate_formation(const std::vector<ASVLite::Geometry::Coordinate
 }
 
 
-std::vector<ASVLite::Geometry::Coordinates3D> Disgo::get_new_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& current_formation, double search_radius) const {
+std::vector<ASVLite::Geometry::Coordinates3D> ICGS::get_new_formation(const std::vector<ASVLite::Geometry::Coordinates3D>& current_formation, double search_radius) const {
   std::vector<std::pair<ASVLite::Geometry::Coordinates3D, double>> proposed_positions_per_vehicle;
   for (const auto& position : current_formation) {
     // Generate possible new positions around the candidate for greedy selection.

@@ -1,4 +1,4 @@
-#include "disgo.h"
+#include "icgs.h"
 #include "utils.h"
 #include "radio_attenuation.h"
 #include <utility>
@@ -20,7 +20,7 @@ struct AsvNavigation {
 
 int main() {
     std::filesystem::path root_dir = std::filesystem::current_path().parent_path();
-    std::filesystem::path results_dir = root_dir / "results_disgo";
+    std::filesystem::path results_dir = root_dir / "results_icgs";
 
     if (!std::filesystem::exists(results_dir)) {
         if (!std::filesystem::create_directory(results_dir)) {
@@ -51,20 +51,20 @@ int main() {
     std::vector<std::pair<double, double>> current_and_new_formation_values;
 
     // Simulation parameters
-    for (int search_iteration = 0; search_iteration < 100; ++search_iteration) {
+    for (int search_iteration = 0; search_iteration < 500; ++search_iteration) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::cout << "\n[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] " << "Iteration: " << search_iteration << "\n";
 
         // Environment parameters
-        double significant_wave_ht = 3.2; // m
+        double significant_wave_ht = 5.0; // m
         double antenna_height = 1.0; // m
         double radio_frequency = 2400.0 * 1'000'000; // Hz
         double rainfall_rate = 13.0; // mm/hr
         double wind_speed = 20.0 / 3.6; // m/s
         double design_antenna_range = 1'000.0; // m
         double fspl_design = get_free_space_path_loss(radio_frequency, design_antenna_range); // dB
-        double environmental_excess_loss = 20.0; // dB
+        double environmental_excess_loss = 15.0; // dB
 
         // Collect current swarm formation
         std::vector<ASVLite::Geometry::Coordinates3D> current_formation;
@@ -76,22 +76,22 @@ int main() {
             }
         }
 
-        // Init Disgo algorithm
-        Disgo disgo(significant_wave_ht, antenna_height, radio_frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);
+        // Init ICGS algorithm
+        ICGS icgs(significant_wave_ht, antenna_height, radio_frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);
 
         // Current formation value
-        double current_formation_value = disgo.evaluate_formation(current_formation);
+        double current_formation_value = icgs.evaluate_formation(current_formation);
         std::cout << "Current value: " << current_formation_value << "\n";
 
         // Compute the new formation
         double search_radius = 10.0; // m
-        std::vector<ASVLite::Geometry::Coordinates3D> new_formation = disgo.get_new_formation(current_formation, search_radius);
+        std::vector<ASVLite::Geometry::Coordinates3D> new_formation = icgs.get_new_formation(current_formation, search_radius);
         for (size_t i = 0; i < new_formation.size(); ++i) {
             asvs[i].path.push_back(new_formation[i]);
         }
 
         // New formation value
-        double new_formation_value = disgo.evaluate_formation(new_formation);
+        double new_formation_value = icgs.evaluate_formation(new_formation);
         std::cout << "New value: " << new_formation_value << "\n";
 
         current_and_new_formation_values.push_back(std::make_pair(current_formation_value, new_formation_value));

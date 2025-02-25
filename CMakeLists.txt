@@ -22,8 +22,8 @@ set( SOURCE
         source/source/utils.cpp
         source/source/radio_attenuation.cpp
         source/source/swarm.cpp
-        source/source/disgo.cpp
-        source/source/disgo_main.cpp
+        source/source/icgs.cpp
+        source/source/icgs_main.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
