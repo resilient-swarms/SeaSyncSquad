@@ -44,7 +44,7 @@ Swarm::Swarm(const std::vector<ASVLite::Geometry::Coordinates3D>& positions,
     print_to_dir(true) {
 
     radio_attenuation_threshold = fspl_design + environmental_excess_loss;
-    free_space_radio_range = std::pow(10.0, (fspl_design - 32.4) / 20.0 - std::log10(radio_frequency/1'000'000.0)) * 1000.0; // m
+    free_space_radio_range = std::pow(10.0, (radio_attenuation_threshold - 32.4) / 20.0 - std::log10(radio_frequency/1'000'000.0)) * 1000.0; // m
     // Create graph vertices
     for (const auto& position : positions) {
         Graph::vertex_descriptor v = boost::add_vertex(graph);
@@ -89,7 +89,7 @@ double Swarm::run_simulation() {
 }
 
 double Swarm::run_simulation(const std::filesystem::path& results_dir, const std::string& scenario_name) {
-    double spatial_connectivity_index; // return value
+    double cumulative_spatial_connectivity_index = 0.0;
 
     // Open files to write simulation results
     std::ofstream comms_result_file;
@@ -104,7 +104,7 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
     }
 
     // Run till end of simulation time
-    for(double time = 0; time < simulation_time; time += simulation_time_step_size/1000.0) {
+    for(double time = 0; time < simulation_time; time += simulation_time_step_size/1000.0) { 
         // For each edge of the graph, compute the radio attenuation
         for (auto edge : boost::make_iterator_range(boost::edges(graph))) {
             // Get edge vertices
@@ -235,7 +235,8 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
         const double mean_degree = node_count > 0 ? total_degree / node_count : 0.0;
         // Calculate composite metric that quantifies the connectivity and spatial spread of the graph. Objective should be to maximise the value of the composite metric.
         const double dispersion_index = mean_edge_length/free_space_radio_range;
-        spatial_connectivity_index = (density + dispersion_index + dispersion_shape_index) / (3 * num_components);
+        double spatial_connectivity_index_current_time_step = (density + dispersion_index + dispersion_shape_index) / (3 * num_components);
+        cumulative_spatial_connectivity_index += spatial_connectivity_index_current_time_step;
         // Write results to file
         if (print_to_dir) {
             graph_result_file   << time << ","
@@ -252,7 +253,7 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
                             << num_components << ","
                             << dispersion_index << ","
                             << dispersion_shape_index << ","
-                            << spatial_connectivity_index << std::endl;
+                            << spatial_connectivity_index_current_time_step << std::endl;
         }
     }
     if (print_to_dir) {
@@ -260,6 +261,8 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
         graph_result_file.close();
     }
 
-    return spatial_connectivity_index;
+    double num_sim_steps = simulation_time / simulation_time_step_size * 1000.0;
+    double mean_spatial_connectivity_index = cumulative_spatial_connectivity_index / num_sim_steps;
+    return mean_spatial_connectivity_index;
 }
 
