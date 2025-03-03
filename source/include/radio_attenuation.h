@@ -42,15 +42,26 @@ double get_sea_spray_attenuation(const double radio_frequency, const double comm
  * Calculate the minimum fresnel zone clearance and diffraction loss due to ocean wave for the given time step.
  * @param radio_frequency in Hz.
  * @param antenna_height in m.
- * @param communication_distance in m.
  * @param sea surface instance.
  * @param antenna_positions.
  * @param time from the start of simulation in sec.
  * @return (1) minimum fresnel clearance in % and (2) loss in dB.
  */
 std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const double radio_frequency, const double antenna_height,
-                                                                         const double communication_distance,
                                                                          const ASVLite::SeaSurface& sea,
                                                                          const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D>& antenna_positions,
                                                                          const double time);
 
+/**
+ * Calculate the diffraction loss due to ocean wave for the given period of time.
+ * @param radio_frequency in Hz.
+ * @param antenna_height in m.
+ * @param communication_distance in m.
+ * @param sea surface instance.
+ * @param time duration for simulation in sec.
+ * @return diffraction loss in dB.
+ */
+double get_diffraction_loss( const double radio_frequency, const double antenna_height,
+                             const double communication_distance,
+                             const ASVLite::SeaSurface& sea,
+                             const double time_duration);

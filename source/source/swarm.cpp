@@ -132,7 +132,7 @@ double Swarm::run_simulation(const std::filesystem::path& results_dir, const std
             graph[edge].sea_spray_attenuation = sea_spray_attenuation;
             // Calculate diffraction loss
             const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D> antenna_positions = std::make_pair(p1, p2);
-            std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, d, sea_surface, antenna_positions, time);
+            std::pair<double, double> min_fresnel_clearance_and_diffraction_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, sea_surface, antenna_positions, time);
             graph[edge].fresnel_clearance = min_fresnel_clearance_and_diffraction_loss.first;
             graph[edge].diffraction_loss = min_fresnel_clearance_and_diffraction_loss.second;
             // Calculate total loss

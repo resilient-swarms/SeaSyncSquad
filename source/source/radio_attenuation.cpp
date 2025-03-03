@@ -151,12 +151,11 @@ std::vector<std::pair<double, ASVLite::Geometry::Coordinates3D>> generate_sea_su
     const double d = 100.0; // offset distance along the line (m)
 
     double sigma_d = 0.0; // cumulative offsets along the line (m)
-    const double total_d = sqrt((p2.keys.x - p1.keys.x)*(p2.keys.x - p1.keys.x) +
-                                (p2.keys.y - p1.keys.y)*(p2.keys.y - p1.keys.y)); // distance between p1 and p2 (m)
+    const double total_d = (pp2 - pp1).norm(); // distance between p1 and p2 (m)
 
     // Compute each point by linear interpolation
     while(sigma_d < total_d) {
-        Eigen::Vector2d point = pp1 + sigma_d * (pp2 - pp1);
+        Eigen::Vector2d point = pp1 + (pp2 - pp1) * sigma_d / total_d;
         ASVLite::Geometry::Coordinates3D p {point(0), point(1), 0.0};
         p.keys.z = sea.get_elevation({point(0), point(1), 0.0}, time);
         result.push_back(std::make_pair(sigma_d, p));
@@ -167,7 +166,7 @@ std::vector<std::pair<double, ASVLite::Geometry::Coordinates3D>> generate_sea_su
     p.keys.z = sea.get_elevation(p, time);
     result.push_back(std::make_pair(total_d, p));
 
-    return std::move(result);
+    return result;
 }
 
 
@@ -204,19 +203,18 @@ std::vector<std::pair<double, double>> generate_fresnel_zone(const double radio_
         std::pair<double, double> fresnel_limits_at_point = std::make_pair(z_los - r, z_los + r);
         result.push_back(fresnel_limits_at_point);
     }
-    return std::move(result);
+    return result;
 }
 
 
 std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const double radio_frequency, const double antenna_height,
-    const double communication_distance,
     const ASVLite::SeaSurface& sea,
     const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D>& antenna_positions,
     const double time) {
     // Ref: ITU-R P.526-15 Section 4.5 and 4.1
 
-    const ASVLite::Geometry::Coordinates3D p1 = antenna_positions.first;
-    const ASVLite::Geometry::Coordinates3D p2 = antenna_positions.second;
+    const ASVLite::Geometry::Coordinates3D p1 {antenna_positions.first.keys.x, antenna_positions.first.keys.y, sea.get_elevation(antenna_positions.first, time)};
+    const ASVLite::Geometry::Coordinates3D p2 {antenna_positions.second.keys.x, antenna_positions.second.keys.y, sea.get_elevation(antenna_positions.second, time)};
 
     // Create sea surface points between the two ASVs
     const std::vector<std::pair<double, ASVLite::Geometry::Coordinates3D>>sea_surface_points_and_offsets = generate_sea_surface_between_points(sea, p1, p2, time);
@@ -271,7 +269,7 @@ std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const d
         const double d1 = sqrt((p.keys.x - p1.keys.x)*(p.keys.x - p1.keys.x) +
                                (p.keys.y - p1.keys.y)*(p.keys.y - p1.keys.y)) / 1000.0; // Km
         const double d2 = d - d1; // Km
-        const double z_los = h_ts + (h_ts - h_rs)/d * d1; // height of LoS in m
+        const double z_los = h_ts + (h_rs - h_ts)/d * d1; // height of LoS in m
         // Calculate the height of the current point above LOS
         const double h = p.keys.z - z_los; // Height is positive for points above LoS else negative.
         const double St = (h + 500*Ce*d1*d2 - h_ts)/d1; // m/Km
@@ -311,4 +309,28 @@ std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const d
     double diffraction_loss = L_uc + (1 - exp(-L_uc/6.0))*(10.0 + 0.02*d); // dB
 
     return std::make_pair(min_clearance_current_timestep, diffraction_loss);
+}
+
+
+double get_diffraction_loss( 
+    const double radio_frequency, const double antenna_height,
+    const double communication_distance,
+    const ASVLite::SeaSurface& sea,
+    const double time_duration) {
+
+    const double time_step_size = 0.04; // Sec
+
+    ASVLite::Geometry::Coordinates3D position1 {100.0, 100.0, 0.0};
+    ASVLite::Geometry::Coordinates3D position2 {100.0, 100.0 + communication_distance, 0.0};
+    const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D> antenna_positions {position1, position2};
+
+    double cumulative_diff_loss = 0.0;
+    for(double time = 0.0; time < time_duration; time+=time_step_size) {
+        std::pair<double, double> fresnel_diff_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, sea, antenna_positions, time);
+        cumulative_diff_loss += fresnel_diff_loss.second;
+    }
+
+    const int num_sim_steps = time_duration / time_step_size;
+    double mean_diff_loss = cumulative_diff_loss / num_sim_steps;
+    return mean_diff_loss;
 }

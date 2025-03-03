@@ -23,7 +23,8 @@ set( SOURCE
         source/source/radio_attenuation.cpp
         source/source/swarm.cpp
         source/source/icgs.cpp
-        source/source/icgs_main.cpp
+        # source/source/icgs_main.cpp
+        source/source/range_table.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
