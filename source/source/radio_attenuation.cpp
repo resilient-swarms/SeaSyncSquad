@@ -148,7 +148,7 @@ std::vector<std::pair<double, ASVLite::Geometry::Coordinates3D>> generate_sea_su
     Eigen::Vector2d pp1(p1.keys.x, p1.keys.y);
     Eigen::Vector2d pp2(p2.keys.x, p2.keys.y);
 
-    const double d = 100.0; // offset distance along the line (m)
+    const double d = 50.0; // offset distance along the line (m)
 
     double sigma_d = 0.0; // cumulative offsets along the line (m)
     const double total_d = (pp2 - pp1).norm(); // distance between p1 and p2 (m)
