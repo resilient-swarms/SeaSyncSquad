@@ -51,7 +51,7 @@ int main() {
     std::vector<std::pair<double, double>> current_and_new_formation_values;
 
     // Simulation parameters
-    for (int search_iteration = 0; search_iteration < 500; ++search_iteration) {
+    for (int search_iteration = 0; search_iteration < 30; ++search_iteration) {
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::cout << "\n[" << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S") << "] " << "Iteration: " << search_iteration << "\n";
