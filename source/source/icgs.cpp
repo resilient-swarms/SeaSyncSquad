@@ -1,5 +1,5 @@
 #include "icgs.h"
-#include "swarm.h"
+#include "icgs_swarm.h"
 #include "radio_attenuation.h"
 #include <iostream>
 #include <algorithm>

@@ -21,10 +21,10 @@ set( SOURCE
         source/source/storm.cpp
         source/source/utils.cpp
         source/source/radio_attenuation.cpp
-        source/source/swarm.cpp
+        source/source/icgs_swarm.cpp
         source/source/icgs.cpp
-        # source/source/main_icgs.cpp
-        source/source/main_range_table.cpp
+        source/source/main_icgs.cpp
+        # source/source/main_range_table.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
