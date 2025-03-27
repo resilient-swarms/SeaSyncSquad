@@ -3,6 +3,7 @@
 #include <utility>
 #include "ASVLite/geometry.h"
 #include "ASVLite/sea_surface.h"
+#include "template_param.h"
 
 enum class Polarisation {horizontal, vertical};
 
@@ -35,7 +36,7 @@ double get_rain_attenuation(const double radio_frequency, const double communica
  * @param wind_speed in m/s.
  * @return loss in dB.
  */
-double get_sea_spray_attenuation(const double radio_frequency, const double communication_distance, const ASVLite::SeaSurface& sea, const double wind_speed );
+double get_sea_spray_attenuation(const double radio_frequency, const double communication_distance, const ASVLite::SeaSurface<N>& sea, const double wind_speed );
 
 
 /**
@@ -48,7 +49,7 @@ double get_sea_spray_attenuation(const double radio_frequency, const double comm
  * @return (1) minimum fresnel clearance in % and (2) loss in dB.
  */
 std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const double radio_frequency, const double antenna_height,
-                                                                         const ASVLite::SeaSurface& sea,
+                                                                         const ASVLite::SeaSurface<N>& sea,
                                                                          const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D>& antenna_positions,
                                                                          const double time);
 
@@ -63,5 +64,5 @@ std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const d
  */
 double get_diffraction_loss( const double radio_frequency, const double antenna_height,
                              const double communication_distance,
-                             const ASVLite::SeaSurface& sea,
+                             const ASVLite::SeaSurface<N>& sea,
                              const double time_duration);

@@ -32,8 +32,7 @@ int main(){
                     std::cout << "freq = " << freq/ 1'000'000.0 << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << " distance = " << distance << "\n";
                     const double wave_heading = 0.0; // rad North
                     const int rng_seed = 1;
-                    const int num_component_waves = 17;
-                    const ASVLite::SeaSurface sea_surface {wave_ht, wave_heading, rng_seed, num_component_waves};
+                    const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
                     const double fspl = get_free_space_path_loss(freq, distance);
                     const double time_duration = 2.0 * 60.0; // sec 
                     const double diff_loss = get_diffraction_loss(freq, ant_ht, distance, sea_surface, time_duration); 

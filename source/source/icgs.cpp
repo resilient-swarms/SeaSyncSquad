@@ -39,7 +39,7 @@ double ICGS::evaluate_formation(const std::vector<ASVLite::Geometry::Coordinates
   const double wave_dp = M_PI / 3.0;
   const int count_component_waves = 9;
   const int wave_rand_seed = 1;
-  const ASVLite::SeaSurface sea_surface {significant_wave_ht, wave_dp, wave_rand_seed, count_component_waves};
+  const ASVLite::SeaSurface<N> sea_surface {significant_wave_ht, wave_dp, wave_rand_seed};
 
   // Initialise swarm and establish communication links
   Swarm swarm(deployment_locations, sea_surface, antenna_height, radio_frequency, rainfall_rate, wind_speed, fspl_design, environmental_excess_loss);

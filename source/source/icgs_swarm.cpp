@@ -26,7 +26,7 @@ struct EdgeFilter {
 };
 
 Swarm::Swarm(const std::vector<ASVLite::Geometry::Coordinates3D>& positions, 
-             const ASVLite::SeaSurface& sea_surface, 
+             const ASVLite::SeaSurface<N>& sea_surface, 
              const double antenna_height, 
              const double radio_frequency, 
              const double rainfall_rate, 

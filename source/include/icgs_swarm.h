@@ -5,6 +5,7 @@
 #include <filesystem>
 #include "ASVLite/sea_surface.h"
 #include "ASVLite/asv.h"
+#include "template_param.h"
 
 struct VertexProperties {
     ASVLite::Geometry::Coordinates3D position;
@@ -27,7 +28,7 @@ using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS
 class Swarm {
 public:
     Swarm(const std::vector<ASVLite::Geometry::Coordinates3D>& positions, 
-          const ASVLite::SeaSurface& sea_surface, 
+          const ASVLite::SeaSurface<N>& sea_surface, 
           const double antenna_height, 
           const double radio_frequency, 
           const double rainfall_rate, 
@@ -44,7 +45,7 @@ private:
     const double radio_frequency; // Hz
     const double rainfall_rate; // mm/hr
     const double wind_speed; // m/s
-    const ASVLite::SeaSurface& sea_surface;
+    const ASVLite::SeaSurface<N>& sea_surface;
     const double fspl_design; // Design free space path loss (dB)
     const double environmental_excess_loss; // Excess radio loss due to environment (dB)
     const size_t swarm_size;

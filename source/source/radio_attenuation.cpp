@@ -93,7 +93,7 @@ double get_rain_attenuation(const double radio_frequency, const double communica
 }
 
 
-double get_sea_spray_attenuation(const double radio_frequency, const double communication_distance, const ASVLite::SeaSurface& sea, const double wind_speed ) {
+double get_sea_spray_attenuation(const double radio_frequency, const double communication_distance, const ASVLite::SeaSurface<N>& sea, const double wind_speed ) {
     // There are two parts to this caluclation
     // part 1 - estimation of volume of sea spray in air, computed as a function of sea state and wind speed,
     // part 2 - estimation of signal attenuation, based on ITU-R P.840.9
@@ -139,7 +139,7 @@ double get_sea_spray_attenuation(const double radio_frequency, const double comm
 }
 
 
-std::vector<std::pair<double, ASVLite::Geometry::Coordinates3D>> generate_sea_surface_between_points(const ASVLite::SeaSurface& sea, 
+std::vector<std::pair<double, ASVLite::Geometry::Coordinates3D>> generate_sea_surface_between_points(const ASVLite::SeaSurface<N>& sea, 
                                                                                                      const ASVLite::Geometry::Coordinates3D& p1, 
                                                                                                      const ASVLite::Geometry::Coordinates3D& p2, 
                                                                                                      const double time) {
@@ -208,7 +208,7 @@ std::vector<std::pair<double, double>> generate_fresnel_zone(const double radio_
 
 
 std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const double radio_frequency, const double antenna_height,
-    const ASVLite::SeaSurface& sea,
+    const ASVLite::SeaSurface<N>& sea,
     const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D>& antenna_positions,
     const double time) {
     // Ref: ITU-R P.526-15 Section 4.5 and 4.1
@@ -315,7 +315,7 @@ std::pair<double, double> get_min_fresnel_clearance_and_diffraction_loss(const d
 double get_diffraction_loss( 
     const double radio_frequency, const double antenna_height,
     const double communication_distance,
-    const ASVLite::SeaSurface& sea,
+    const ASVLite::SeaSurface<N>& sea,
     const double time_duration) {
 
     const double time_step_size = 0.04; // Sec

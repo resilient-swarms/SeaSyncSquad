@@ -11,10 +11,6 @@ include_directories(
 )
 
 set( SOURCE
-        dependency/ASVLite/cpp_current/source/geometry.cpp
-        dependency/ASVLite/cpp_current/source/regular_wave.cpp
-        dependency/ASVLite/cpp_current/source/sea_surface.cpp
-        dependency/ASVLite/cpp_current/source/asv.cpp
         source/source/netcdf_rain.cpp 
         source/source/netcdf_wave.cpp 
         source/source/netcdf_wind.cpp 
@@ -23,8 +19,11 @@ set( SOURCE
         source/source/radio_attenuation.cpp
         source/source/icgs_swarm.cpp
         source/source/icgs.cpp
+        # source/source/flux_asv.cpp
         source/source/main_icgs.cpp
+        # source/source/main_flux.cpp
         # source/source/main_range_table.cpp
+        # source/source/temp.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
