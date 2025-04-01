@@ -11,17 +11,18 @@ include_directories(
 )
 
 set( SOURCE
-        source/source/netcdf_rain.cpp 
-        source/source/netcdf_wave.cpp 
-        source/source/netcdf_wind.cpp 
-        source/source/storm.cpp
+        dependency/ASVLite/cpp_current/source/rudder_controller.cpp
+        # source/source/netcdf_rain.cpp 
+        # source/source/netcdf_wave.cpp 
+        # source/source/netcdf_wind.cpp 
+        # source/source/storm.cpp
         source/source/utils.cpp
         source/source/radio_attenuation.cpp
         source/source/icgs_swarm.cpp
         source/source/icgs.cpp
         # source/source/flux_asv.cpp
-        source/source/main_icgs.cpp
-        # source/source/main_flux.cpp
+        # source/source/main_icgs.cpp
+        source/source/main_flux.cpp
         # source/source/main_range_table.cpp
         # source/source/temp.cpp
 )
