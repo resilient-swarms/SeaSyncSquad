@@ -23,7 +23,7 @@ int main() {
     const double simulation_time = 300.0 * 60.0; // sec   
 
     // Formation parameters
-    const size_t swarm_size = 6;
+    const size_t swarm_size = 7;
     const double proximity_threashold = 10.0; // Proximity to circle
     const double formation_radius = 200.0; // m
     const double formation_centre_x = 0.0;
@@ -139,79 +139,74 @@ int main() {
             y_paths[i].push_back(position.keys.y);
         }
         
-        // // Update Animation
-        // plt::clf();  // Clear previous frame
-        // // 1. Draw vector field in the background
-        // std::vector<double> X, Y, U, V;
-        // const double dx = 100.0;
-        // double axis_min = -field_length / 2.0;
-        // double axis_max =  field_length / 2.0;
-        // for (double x = axis_min; x <= axis_max; x += dx) {
-        //     for (double y = axis_min; y <= axis_max; y += dx) {
-        //         Eigen::Vector2d F = Eigen::Vector2d::Zero();
-        //         Eigen::Vector2d p0 {formation_center.keys.x, formation_center.keys.y};
-        //         Eigen::Vector2d p1 {x, y};
-        //         Eigen::Vector2d p01 = p0 - p1;
-        //         F += -k_circle * (formation_radius - p01.norm())/p01.norm() * p01; // Atraction to circle circumference
-        //         for (size_t j = 0; j < swarm_size; ++j) {
-        //             const ASVLite::Geometry::Coordinates3D neighbour_position = swarm[j].get_position();
-        //             Eigen::Vector2d p2 {neighbour_position.keys.x, neighbour_position.keys.y};
-        //             Eigen::Vector2d p21 = (p2 - p1);
-        //             if(p21.norm() <= radio_range) {
-        //                 F += -k_neighbour * (radio_range - p21.norm())/p21.norm() * p21; // Repulsion from neighbours
-        //             }
-        //         }
-        //         X.push_back(x);
-        //         Y.push_back(y);
-        //         U.push_back(F.x());
-        //         V.push_back(F.y());
-        //     }
-        // }
-        // for (size_t i = 0; i < X.size(); ++i) {
-        //     double x_start = X[i];
-        //     double y_start = Y[i];
-        //     double x_end = x_start + 0.1 * U[i];
-        //     double y_end = y_start + 0.1 * V[i];
-        //     std::vector<double> xs = {x_start, x_end};
-        //     std::vector<double> ys = {y_start, y_end};
-        //     plt::plot(xs, ys, {{"color", "#a6cee3"}});  // Light blue arrows
-        //     // Arrowhead
-        //     double arrow_len = 5.0;
-        //     double angle = std::atan2(V[i], U[i]);
-        //     double left_angle = angle + M_PI - M_PI / 6.0;
-        //     double right_angle = angle + M_PI + M_PI / 6.0;
-        //     double x_left = x_end + arrow_len * std::cos(left_angle);
-        //     double y_left = y_end + arrow_len * std::sin(left_angle);
-        //     double x_right = x_end + arrow_len * std::cos(right_angle);
-        //     double y_right = y_end + arrow_len * std::sin(right_angle);
-        //     plt::plot({x_end, x_left}, {y_end, y_left}, {{"color", "#a6cee3"}});
-        //     plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
-        // }
-        // // 2. Draw circle formation
-        // plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
-        // // 3. Draw vehicle paths in a darker color
-        // for (size_t i = 0; i < swarm_size; ++i) {
-        //     plt::plot(x_paths[i], y_paths[i], {{"color", "#444444"}});  // Dark grey
-        // }
-        // // 4. Draw current vehicle positions on top
-        // for (size_t i = 0; i < swarm_size; ++i) {
-        //     const ASVLite::Geometry::Coordinates3D pos = swarm[i].get_position();
-        //     plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", "red"}, {"marker", "o"}, {"markersize", "4"}});
-        // }
-        // // 5. Final plot config
-        // plt::xlim(axis_min, axis_max);
-        // plt::ylim(axis_min, axis_max);
-        // plt::axis("equal");
-        // plt::title("ASV Swarm: Paths, Forces & Positions");
-        // plt::tight_layout();
-        // plt::draw();
-        // plt::pause(0.00001);
+        // Update Animation
+        plt::clf();  // Clear previous frame
+        // 1. Draw vector field in the background
+        std::vector<double> X, Y, U, V;
+        const double dx = 50.0;
+        double axis_min = -field_length / 2.0;
+        double axis_max =  field_length / 2.0;
+        for (double x = axis_min; x <= axis_max; x += dx) {
+            for (double y = axis_min; y <= axis_max; y += dx) {
+                ASVLite::Geometry::Coordinates3D position {x, y, 0.0};
+                Eigen::Vector2d F = Eigen::Vector2d::Zero();
+                F += get_F_circle(position);
+                for (size_t j = 0; j < swarm_size; ++j) {
+                    const ASVLite::Geometry::Coordinates3D neighbour_position = swarm[j].get_position();
+                    F += get_F_neighbour(position, neighbour_position);
+                }
+                X.push_back(x);
+                Y.push_back(y);
+                U.push_back(F.x());
+                V.push_back(F.y());
+            }
+        }
+        for (size_t i = 0; i < X.size(); ++i) {
+            double x_start = X[i];
+            double y_start = Y[i];
+            double x_end = x_start + 0.1 * U[i];
+            double y_end = y_start + 0.1 * V[i];
+            std::vector<double> xs = {x_start, x_end};
+            std::vector<double> ys = {y_start, y_end};
+            plt::plot(xs, ys, {{"color", "#a6cee3"}});  // Light blue arrows
+            // Arrowhead
+            double arrow_len = 5.0;
+            double angle = std::atan2(V[i], U[i]);
+            double left_angle = angle + M_PI - M_PI / 6.0;
+            double right_angle = angle + M_PI + M_PI / 6.0;
+            double x_left = x_end + arrow_len * std::cos(left_angle);
+            double y_left = y_end + arrow_len * std::sin(left_angle);
+            double x_right = x_end + arrow_len * std::cos(right_angle);
+            double y_right = y_end + arrow_len * std::sin(right_angle);
+            plt::plot({x_end, x_left}, {y_end, y_left}, {{"color", "#a6cee3"}});
+            plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
+        }
+        // 2. Draw circle formation
+        plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
+        // 3. Draw vehicle paths in a darker color
+        for (size_t i = 0; i < swarm_size; ++i) {
+            plt::plot(x_paths[i], y_paths[i], {{"color", "#444444"}});  // Dark grey
+        }
+        // 4. Draw current vehicle positions on top
+        for (size_t i = 0; i < swarm_size; ++i) {
+            const ASVLite::Geometry::Coordinates3D pos = swarm[i].get_position();
+            plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", "red"}, {"marker", "o"}, {"markersize", "4"}});
+        }
+        // 5. Final plot config
+        plt::xlim(axis_min, axis_max);
+        plt::ylim(axis_min, axis_max);
+        plt::axis("equal");
+        plt::title("ASV Swarm: Paths, Forces & Positions");
+        plt::tight_layout();
+        plt::draw();
+        plt::pause(0.00001);
     }
+    
     
     // Plot the final reault to file
     // 1. Draw vector field in the background
     std::vector<double> X, Y, U, V;
-    const double dx = 10.0;
+    const double dx = 50.0;
     double axis_min = -field_length / 2.0;
     double axis_max =  field_length / 2.0;
     for (double x = axis_min; x <= axis_max; x += dx) {
