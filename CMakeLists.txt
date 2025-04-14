@@ -22,8 +22,8 @@ set( SOURCE
         source/source/icgs.cpp
         # source/source/flux_asv.cpp
         # source/source/main_icgs.cpp
-        source/source/main_flux.cpp
-        # source/source/main_range_table.cpp
+        # source/source/main_flux.cpp
+        source/source/main_range_table.cpp
         # source/source/temp.cpp
 )
 

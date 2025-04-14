@@ -19,29 +19,86 @@ int main(){
         std::cout << results_dir << " already exists. Continuing execution.\n";
     }
 
-    std::filesystem::path results_file_path = results_dir / ("results.csv");
-    std::ofstream results_file(results_file_path);
-    results_file << "freq(MHz),ant_ht(m),wave_ht(m),dist(m),fspl(db),diff_loss(db),total_loss(db)\n";
+    std::filesystem::path results_file_path_diffraction = results_dir / ("diffraction.csv");
+    std::ofstream results_file_diffraction(results_file_path_diffraction);
+    results_file_diffraction << "freq(MHz),ant_ht(m),wave_ht(m),dist(m),fspl(db),diff_loss(db),total_loss(db)\n";
 
-    std::vector<double> freqs {868.0, 2400.0, 5200.0}; // MHz
+    std::vector<double> freqs {2400.0, 5200.0}; // MHz
     for(double freq : freqs) {
         freq = freq * 1'000'000.0; // Hz
         for(double ant_ht = 0.5; ant_ht <= 3.0; ant_ht += 0.5) { // m
             for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
-                for(double distance = 100.0; distance <= 5000.0; distance += 100.0) { // m
+                for(double distance = 500.0; distance <= 5000.0; distance += 500.0) { // m
                     std::cout << "freq = " << freq/ 1'000'000.0 << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << " distance = " << distance << "\n";
                     const double wave_heading = 0.0; // rad North
                     const int rng_seed = 1;
                     const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
                     const double fspl = get_free_space_path_loss(freq, distance);
-                    const double time_duration = 2.0 * 60.0; // sec 
+                    const double time_duration = 30.0 * 60.0; // sec 
                     const double diff_loss = get_diffraction_loss(freq, ant_ht, distance, sea_surface, time_duration); 
                     const double total_loss = fspl + diff_loss;
-                    results_file << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << distance << "," << fspl << "," << diff_loss << "," << total_loss << "\n";
+                    results_file_diffraction << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << distance << "," << fspl << "," << diff_loss << "," << total_loss << "\n";
                 }
             }
         }
     }
+    results_file_diffraction.close();
+    
+
+    std::filesystem::path results_file_path_fspl = results_dir / ("fspl.csv");
+    std::ofstream results_file_fspl(results_file_path_fspl);
+    results_file_fspl << "freq(MHz),dist(m),fspl(db)\n";
+
+    for(double freq : freqs) {
+        freq = freq * 1'000'000.0; // Hz
+        for(double ant_ht = 0.5; ant_ht <= 3.0; ant_ht += 0.5) { // m
+            for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
+                for(double distance = 100.0; distance <= 5000.0; distance += 100.0) { // m
+                    const double fspl = get_free_space_path_loss(freq, distance);
+                    results_file_fspl << freq/ 1'000'000.0 << "," << distance << "," << fspl <<  "\n";
+                }
+            }
+        }
+    }
+    results_file_fspl.close();
+
+
+    std::filesystem::path results_file_path_rain = results_dir / ("rain_attenuation.csv");
+    std::ofstream results_file_rain_attenuation(results_file_path_rain);
+    results_file_rain_attenuation << "freq(MHz),polarisation,dist(m),rainfall_rate(mm/hr),rain_attenuation(db)\n";
+    std::vector<Polarisation> polarisations {Polarisation::horizontal, Polarisation::vertical};
+    for(Polarisation polarisation : polarisations) {
+        for(double freq : freqs) {
+            freq = freq * 1'000'000.0; // Hz
+            for(double distance = 100.0; distance <= 5000.0; distance += 100.0) { // m
+                for(double rainfall_rate = 5.0; rainfall_rate <= 20.0; rainfall_rate += 5.0) { // mm/hr 
+                    const double rain_attenuation = get_rain_attenuation(freq, distance, polarisation, rainfall_rate);
+                    results_file_rain_attenuation << freq / 1'000'000.0 << "," << ((polarisation == Polarisation::horizontal)? "horizontal" : "vertical") << "," << distance << "," << rainfall_rate << "," << rain_attenuation << "\n";
+                }
+            }
+        }
+    }
+    results_file_rain_attenuation.close();
+
+
+    std::filesystem::path results_file_path_sea_spray = results_dir / ("sea_spray_attenuation.csv");
+    std::ofstream results_file_sea_spray_attenuation(results_file_path_sea_spray);
+    results_file_sea_spray_attenuation << "freq(MHz),dist(m),wave_ht(m),wind_speed(km/hr),sea_spray_attenuation(db)\n";
+    for(double freq : freqs) {
+        freq = freq * 1'000'000.0; // Hz
+        for(double distance = 100.0; distance <= 5000.0; distance += 100.0) { // m
+            for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
+                for(double wind_speed = 50.0; wind_speed <= 200.0; wind_speed += 50.0) { // km/hr 
+                    const double wave_heading = 0.0; // rad North
+                    const int rng_seed = 1;
+                    const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+                    const double sea_spray_attenuation = get_sea_spray_attenuation(freq, distance, sea_surface, wind_speed);
+                    results_file_sea_spray_attenuation << freq / 1'000'000.0 << "," << distance << "," << wave_ht << "," << wind_speed << "," << sea_spray_attenuation << "\n";
+                }
+            }
+        }
+    }
+    results_file_sea_spray_attenuation.close();
 
     return 0;
 }
