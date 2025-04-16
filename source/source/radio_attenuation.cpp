@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
+#include <iostream>
 
 double get_free_space_path_loss(const double radio_frequency, const double communication_distance) {
     // Ref: ITU-R P.525-4
@@ -320,17 +321,43 @@ double get_diffraction_loss(
 
     const double time_step_size = 0.04; // Sec
 
-    ASVLite::Geometry::Coordinates3D position1 {100.0, 100.0, 0.0};
-    ASVLite::Geometry::Coordinates3D position2 {100.0, 100.0 + communication_distance, 0.0};
+    const ASVLite::Geometry::Coordinates3D position1 {100.0, 100.0, 0.0};
+    const ASVLite::Geometry::Coordinates3D position2 {100.0, 100.0 + communication_distance, 0.0};
     const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D> antenna_positions {position1, position2};
 
     double cumulative_diff_loss = 0.0;
     for(double time = 0.0; time < time_duration; time+=time_step_size) {
-        std::pair<double, double> fresnel_diff_loss = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, sea, antenna_positions, time);
-        cumulative_diff_loss += fresnel_diff_loss.second;
+        const auto [fresnel_clearance, diffraction_loss] = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, sea, antenna_positions, time);
+        cumulative_diff_loss = cumulative_diff_loss + diffraction_loss;
     }
 
     const int num_sim_steps = time_duration / time_step_size;
     double mean_diff_loss = cumulative_diff_loss / num_sim_steps;
     return mean_diff_loss;
+}
+
+
+double get_comms_window_loss( const double diffraction_threshold, 
+    const double radio_frequency, const double antenna_height,
+    const double communication_distance,
+    const ASVLite::SeaSurface<N>& sea,
+    const double time_duration) {
+
+    const double time_step_size = 0.04; // Sec
+
+    const ASVLite::Geometry::Coordinates3D position1 {100.0, 100.0, 0.0};
+    const ASVLite::Geometry::Coordinates3D position2 {100.0, 100.0 + communication_distance, 0.0};
+    const std::pair<ASVLite::Geometry::Coordinates3D, ASVLite::Geometry::Coordinates3D> antenna_positions {position1, position2};
+
+    int count_windows = 0;
+    for(double time = 0.0; time < time_duration; time+=time_step_size) {
+        const auto [fresnel_clearance, diffraction_loss] = get_min_fresnel_clearance_and_diffraction_loss(radio_frequency, antenna_height, sea, antenna_positions, time);
+        if(diffraction_loss >= diffraction_threshold) {
+            ++count_windows;
+        }
+    }
+
+    // std::cout << count_windows << "\n";
+
+    return (count_windows * time_step_size)/time_duration * 100.0;
 }

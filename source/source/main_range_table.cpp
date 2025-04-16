@@ -100,5 +100,26 @@ int main(){
     }
     results_file_sea_spray_attenuation.close();
 
+
+    std::filesystem::path results_file_path_comms_window = results_dir / ("comms_window.csv");
+    std::ofstream results_file_comms_window(results_file_path_comms_window);
+    results_file_comms_window << "freq(MHz),ant_ht(m),wave_ht(m),comms_window(%)\n";
+
+    const double distance = 1000.0; // m
+    const double freq = 2400.0 * 1'000'000.0; // Hz
+    const double threshold = 20.0; // dB
+    for(double ant_ht = 0.5; ant_ht <= 3.0; ant_ht += 0.5) { // m
+        for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
+            std::cout << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << "\n";
+            const double wave_heading = 0.0; // rad North
+            const int rng_seed = 1;
+            const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+            const double time_duration = 30.0 * 60.0; // sec 
+            const double comms_window = get_comms_window_loss(threshold, freq, ant_ht, distance, sea_surface, time_duration); 
+            results_file_comms_window << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << comms_window << "\n";
+        }
+    }
+    results_file_comms_window.close();
+
     return 0;
 }

@@ -66,3 +66,18 @@ double get_diffraction_loss( const double radio_frequency, const double antenna_
                              const double communication_distance,
                              const ASVLite::SeaSurface<N>& sea,
                              const double time_duration);
+
+
+/**
+ * Calculate the loss of communicaiton window due to ocean wave for the given period of time.
+ * @param radio_frequency in Hz.
+ * @param antenna_height in m.
+ * @param communication_distance in m.
+ * @param sea surface instance.
+ * @param time duration for simulation in sec.
+ * @return diffraction loss in dB.
+ */
+double get_comms_window_loss(const double diffraction_threshold, const double radio_frequency, const double antenna_height,
+    const double communication_distance,
+    const ASVLite::SeaSurface<N>& sea,
+    const double time_duration);
