@@ -157,7 +157,7 @@ plt.close()
 df = pd.read_csv(dir_results.joinpath("comms_window.csv"))
 plt.figure(figsize=(6, 4))
 for idx, (ant_ht, group) in enumerate(df.groupby("ant_ht(m)")):    
-    plt.scatter(group['wave_ht(m)'], 100 - group['comms_window(%)'],
+    plt.scatter(group['wave_ht(m)'], group['comms_window(%)'],
                 label=f"{ant_ht} m", edgecolor='black', linewidth=0.2, alpha=0.8)
 plt.title('Obstruction-Free Link Time vs Wave Height')
 plt.xlabel('Wave Height (m)')
@@ -174,7 +174,7 @@ plt.close()
 df = pd.read_csv(dir_results.joinpath("comms_window_case_study.csv"))
 plt.figure(figsize=(6, 4))
 for idx, (dist, group) in enumerate(df.groupby("dist(m)")):    
-    plt.scatter(group['wave_ht(m)'], 100 - group['comms_window(%)'],
+    plt.scatter(group['wave_ht(m)'], group['comms_window(%)'],
                 label=f"{dist} m", edgecolor='black', linewidth=0.2, alpha=0.8)
 plt.title('Obstruction-Free Link Time vs Wave Height')
 plt.xlabel('Wave Height (m)')

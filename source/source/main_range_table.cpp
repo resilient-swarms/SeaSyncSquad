@@ -139,14 +139,15 @@ int main(){
                 }
             }
             // Collect the results from all the futures (threads)
-            std::vector<double> comms_windows;
-            comms_windows.reserve(comms_window_futures.size());
+            std::vector<double> comms_window_losses;
+            comms_window_losses.reserve(comms_window_futures.size());
             for(auto& fut : comms_window_futures) {
                 // fut.get() waits for the thread to finish and returns the result
-                comms_windows.push_back(fut.get());
+                comms_window_losses.push_back(fut.get());
             }
             // Calculate the average comms_window from all scenarios
-            const double comms_window = std::accumulate(comms_windows.begin(), comms_windows.end(), 0.0) / comms_windows.size();
+            const double comms_window_loss = std::accumulate(comms_window_losses.begin(), comms_window_losses.end(), 0.0) / comms_window_losses.size();
+            const double comms_window = 100.0 - comms_window_loss;
             // Write the aggregated result to the CSV file
             results_file_comms_window << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << comms_window << "\n";
         }
@@ -159,8 +160,6 @@ int main(){
     std::ofstream results_file_comms_window_case_study(results_file_path_comms_window_case_study);
     results_file_comms_window_case_study << "freq(MHz),ant_ht(m),dist(m),wave_ht(m),comms_window(%)\n";
 
-    const double freq = 2400.0 * 1'000'000.0; // Hz
-    const double threshold = 20.0; // dB
     const double ant_ht = 0.5; // m
     const std::vector<double> distances = {75.0, 125.0, 250.0, 500.0, 1000.0}; // m
     for(double distance : distances) {
