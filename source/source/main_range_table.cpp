@@ -30,12 +30,17 @@ int main(){
             for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
                 for(double distance = 500.0; distance <= 5000.0; distance += 500.0) { // m
                     std::cout << "freq = " << freq/ 1'000'000.0 << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << " distance = " << distance << "\n";
-                    const double wave_heading = 0.0; // rad North
-                    const int rng_seed = 1;
-                    const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+                    std::vector<double> diff_losses; 
+                    for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading+=M_PI/6.0) { // rad North
+                        for(int rng_seed = 1; rng_seed <= 3; ++rng_seed) {
+                            const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+                            const double time_duration = 30.0 * 60.0; // sec 
+                            const double diff_loss = get_diffraction_loss(freq, ant_ht, distance, sea_surface, time_duration); 
+                            diff_losses.push_back(diff_loss);
+                        }
+                    }
+                    const double diff_loss = std::accumulate(diff_losses.begin(), diff_losses.end(), 0.0) / diff_losses.size();
                     const double fspl = get_free_space_path_loss(freq, distance);
-                    const double time_duration = 30.0 * 60.0; // sec 
-                    const double diff_loss = get_diffraction_loss(freq, ant_ht, distance, sea_surface, time_duration); 
                     const double total_loss = fspl + diff_loss;
                     results_file_diffraction << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << distance << "," << fspl << "," << diff_loss << "," << total_loss << "\n";
                 }
@@ -112,12 +117,13 @@ int main(){
         for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
             std::cout << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << "\n";
             std::vector<double> comms_windows;
-            for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading += M_PI/6.0) { // rad North
-                const int rng_seed = 1;
-                const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
-                const double time_duration = 30.0 * 60.0; // sec 
-                double comms_window = get_comms_window_loss(threshold, freq, ant_ht, distance, sea_surface, time_duration); 
-                comms_windows.push_back(comms_window);
+            for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading+=M_PI/6.0) { // rad North
+                for(int rng_seed = 1; rng_seed <= 3; ++rng_seed) {
+                    const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+                    const double time_duration = 30.0 * 60.0; // sec 
+                    double comms_window = get_comms_window_loss(threshold, freq, ant_ht, distance, sea_surface, time_duration); 
+                    comms_windows.push_back(comms_window);
+                }
             }
             const double comms_window = std::accumulate(comms_windows.begin(), comms_windows.end(), 0.0) / comms_windows.size();
             results_file_comms_window << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << comms_window << "\n";
