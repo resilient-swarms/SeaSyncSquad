@@ -129,7 +129,7 @@ int main(){
         for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
             std::cout << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << "\n";
             std::vector<std::future<double>> comms_window_futures;
-            for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading+=M_PI/6.0) { // rad North
+            for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading+=M_PI/36.0) { // rad North
                 for(int rng_seed = 1; rng_seed <= 3; ++rng_seed) {
                     comms_window_futures.push_back(std::async(std::launch::async, [=]() {
                             const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
