@@ -166,3 +166,20 @@ plt.legend(title='Antenna Height')
 plt.tight_layout()
 plt.savefig(dir_results.joinpath("comms_window.png"), bbox_inches="tight")
 plt.close()
+
+# =================================
+# Plot 6: Comms Window - Case study
+# =================================
+
+df = pd.read_csv(dir_results.joinpath("comms_window_case_study.csv"))
+plt.figure(figsize=(6, 4))
+for idx, (dist, group) in enumerate(df.groupby("dist(m)")):    
+    plt.scatter(group['wave_ht(m)'], 100 - group['comms_window(%)'],
+                label=f"{dist} m", edgecolor='black', linewidth=0.2, alpha=0.8)
+plt.title('Obstruction-Free Link Time vs Wave Height')
+plt.xlabel('Wave Height (m)')
+plt.ylabel('Obstruction-Free Link Time (%)')
+plt.legend(title='Distance (m)')
+plt.tight_layout()
+plt.savefig(dir_results.joinpath("comms_window_case_study.png"), bbox_inches="tight")
+plt.close()
