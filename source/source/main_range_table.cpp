@@ -4,6 +4,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <future> 
 
 int main(){
 
@@ -30,18 +31,29 @@ int main(){
             for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
                 for(double distance = 500.0; distance <= 5000.0; distance += 500.0) { // m
                     std::cout << "freq = " << freq/ 1'000'000.0 << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << " distance = " << distance << "\n";
-                    std::vector<double> diff_losses; 
+                    std::vector<std::future<double>> diffraction_futures;
                     for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading+=M_PI/6.0) { // rad North
                         for(int rng_seed = 1; rng_seed <= 3; ++rng_seed) {
-                            const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
-                            const double time_duration = 30.0 * 60.0; // sec 
-                            const double diff_loss = get_diffraction_loss(freq, ant_ht, distance, sea_surface, time_duration); 
-                            diff_losses.push_back(diff_loss);
+                            // A lambda function [=](){...} captures needed variables by value for thread safety.
+                            diffraction_futures.push_back(std::async(std::launch::async, [=]() {
+                                const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+                                const double time_duration = 30.0 * 60.0; // 30 minutes in seconds
+                                return get_diffraction_loss(freq, ant_ht, distance, sea_surface, time_duration);
+                            }));
                         }
                     }
+                    // Collect the results from all the futures (threads)
+                    std::vector<double> diff_losses;
+                    diff_losses.reserve(diffraction_futures.size());
+                    for(auto& fut : diffraction_futures) {
+                        // fut.get() waits for the thread to finish and returns the result
+                        diff_losses.push_back(fut.get());
+                    }
+                    // Calculate the average diffraction loss from all scenarios
                     const double diff_loss = std::accumulate(diff_losses.begin(), diff_losses.end(), 0.0) / diff_losses.size();
                     const double fspl = get_free_space_path_loss(freq, distance);
                     const double total_loss = fspl + diff_loss;
+                    // Write the aggregated result to the CSV file
                     results_file_diffraction << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << distance << "," << fspl << "," << diff_loss << "," << total_loss << "\n";
                 }
             }
@@ -116,16 +128,26 @@ int main(){
     for(double ant_ht = 0.5; ant_ht <= 3.0; ant_ht += 0.5) { // m
         for(double wave_ht = 0.5; wave_ht <= 10.0; wave_ht += 0.5) { // m
             std::cout << " ant_ht = " << ant_ht << " wave_ht = " << wave_ht << "\n";
-            std::vector<double> comms_windows;
+            std::vector<std::future<double>> comms_window_futures;
             for(double wave_heading = 0.0; wave_heading < M_PI; wave_heading+=M_PI/6.0) { // rad North
                 for(int rng_seed = 1; rng_seed <= 3; ++rng_seed) {
-                    const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
-                    const double time_duration = 30.0 * 60.0; // sec 
-                    double comms_window = get_comms_window_loss(threshold, freq, ant_ht, distance, sea_surface, time_duration); 
-                    comms_windows.push_back(comms_window);
+                    comms_window_futures.push_back(std::async(std::launch::async, [=]() {
+                            const ASVLite::SeaSurface<N> sea_surface {wave_ht, wave_heading, rng_seed};
+                            const double time_duration = 30.0 * 60.0; // sec 
+                            return get_comms_window_loss(threshold, freq, ant_ht, distance, sea_surface, time_duration); 
+                    }));
                 }
             }
+            // Collect the results from all the futures (threads)
+            std::vector<double> comms_windows;
+            comms_windows.reserve(comms_window_futures.size());
+            for(auto& fut : comms_window_futures) {
+                // fut.get() waits for the thread to finish and returns the result
+                comms_windows.push_back(fut.get());
+            }
+            // Calculate the average comms_window from all scenarios
             const double comms_window = std::accumulate(comms_windows.begin(), comms_windows.end(), 0.0) / comms_windows.size();
+            // Write the aggregated result to the CSV file
             results_file_comms_window << freq/ 1'000'000.0 << "," << ant_ht << "," << wave_ht << "," << comms_window << "\n";
         }
     }
