@@ -95,11 +95,8 @@ for i, freq in enumerate(radio_frequencies):
 # Create a single legend for the figure from the last subplot
 handles, labels = axes[-1][-1].get_legend_handles_labels()
 fig.legend(handles=handles, title="Wave Height (m)", labels=labels,
-           loc="lower center", bbox_to_anchor=(0.5, -0.01),
-           ncol=len(wave_hts), fontsize=9, title_fontsize=10)
+           loc="lower right", ncol=len(wave_hts), fontsize=8, title_fontsize=8)
 
-fig.suptitle("Impact of Sea State, Antenna Height, and Radio Frequency on Diffraction Loss",
-             fontsize=14, fontweight="bold")
 fig.text(0.5, 0.04, 'Distance (m)', ha='center', fontsize=10)
 fig.text(0.02, 0.5, 'Diffraction Loss (dB)', va='center', rotation='vertical', fontsize=10)
 
