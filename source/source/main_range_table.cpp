@@ -165,7 +165,7 @@ double get_comms_for_wave_height(double wave_height, double current_distance) {
 void run_adaptive_distance_scenario(std::string output_filename) {
     // --- Scenario Parameters ---
     const double initial_distance = 1000.0; // m
-    const double required_comms_window = 90.0; // %
+    const double required_comms_window = 70.0; // %
 
     // --- File Output Setup ---
     std::ofstream results_file(output_filename);
