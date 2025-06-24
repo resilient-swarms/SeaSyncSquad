@@ -19,10 +19,10 @@ int main() {
     const double simulation_time = 300.0 * 60.0; // sec   
 
     // Formation parameters
-    const size_t swarm_size             = 12;
+    const size_t swarm_size             = 6;
     const double proximity_threashold   = 10.0;   // Proximity to circle
-    const double formation_radius       = 200.0;  // m
-    const double field_length           = 1000.0; // m
+    const double formation_radius       = 1000.0;  // m
+    const double field_length           = 2500.0; // m
     const double formation_centre_x     = 0.0;    // m
     const double formation_centre_y     = 0.0;    // m
     const double radio_range = formation_radius;  // m
@@ -84,14 +84,9 @@ int main() {
     const double radio_frequency = 2.4e9; // Hz
     std::vector<ASVLite::Asv<N>> swarm;
     for(size_t i = 0; i < swarm_size; ++i) {
-        double x = distribution(gen);
-        while (x >= -formation_radius && x <= formation_radius) {
-            x = distribution(gen);
-        }
-        double y = distribution(gen);
-        while (y >= -formation_radius && y <= formation_radius) {
-            y = distribution(gen);
-        }
+        double angle = i*(2.0*M_PI)/swarm_size;
+        double x = formation_center.keys.x + (formation_radius * std::cos(angle));
+        double y = formation_center.keys.y + (formation_radius * std::sin(angle));
         const double heading = std::atan2(x, y); 
         const double z = 0.0;
         const ASVLite::Geometry::Coordinates3D position {x, y, 0};
@@ -159,7 +154,7 @@ int main() {
             plt::clf();  // Clear previous frame
             // 1. Draw vector field in the background
             std::vector<double> X, Y, U, V;
-            const double dx = 50.0;
+            const double dx = 75.0;
             double axis_min = -field_length / 2.0;
             double axis_max =  field_length / 2.0;
             for (double x = axis_min; x <= axis_max; x += dx) {
