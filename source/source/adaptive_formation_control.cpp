@@ -1,4 +1,6 @@
 #include <iostream>
+#include <filesystem>
+#include <fstream>
 #include <random>
 #include <Eigen/Dense>
 #include "matplotlibcpp.h"
@@ -10,19 +12,192 @@
 
 namespace plt = matplotlibcpp;
 
+
+// --- Data Structures and Model Data Store ---
+
+// A structure to hold a single data point for comms window vs. distance
+struct DistanceCommData {
+    double distance_m;
+    double comms_window_pct;
+};
+
+// The main data store, declared as a file-scope static variable.
+static std::map<double, std::vector<DistanceCommData>> model_data_;
+
+
+// --- Forward Declarations ---
+
+double get_distance_for_wave_height(double wave_height, double required_comms_window);
+double get_comms_for_wave_height(double wave_height, double current_distance);
+
+
+// --- Public API Functions ---
+
+/**
+ * @brief Parses the communication model CSV file and populates the global model_data_ map.
+ * @param csv_path The full path to the comms_window_case_study.csv file.
+ */
+void load_comm_model_data(const std::string& csv_path) {
+    std::ifstream file(csv_path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open CSV file: " + csv_path);
+    }
+    model_data_.clear(); 
+    std::string line;
+    std::getline(file, line); // Discard header
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string cell;
+        std::getline(ss, cell, ','); // freq
+        std::getline(ss, cell, ','); // ant_ht
+        double distance = std::stod((std::getline(ss, cell, ','), cell));
+        double wave_ht = std::stod((std::getline(ss, cell, ','), cell));
+        double comms_window = std::stod((std::getline(ss, cell, ','), cell));
+        model_data_[wave_ht].push_back({distance, comms_window});
+    }
+    for (auto& pair : model_data_) {
+        std::sort(pair.second.begin(), pair.second.end(), [](const auto& a, const auto& b) {
+            return a.distance_m < b.distance_m;
+        });
+    }
+    std::cout << "Communication model loaded successfully with " << model_data_.size() << " unique wave height entries.\n";
+}
+
+/**
+ * @brief Calculates the maximum allowable inter-vehicle distance that can be interpolated
+ * from the loaded data to meet a minimum communication window requirement.
+ * This function performs a two-dimensional linear interpolation.
+ * @param current_wave_height The current significant wave height in meters.
+ * @param required_comms_window The minimum acceptable communication window (e.g., 85.0 for 85%).
+ * @return The maximum allowable inter-vehicle distance in meters. Returns edge values if inputs are outside the data range.
+ */
+double get_max_allowable_distance(double current_wave_height, double required_comms_window) {
+    if (model_data_.empty()) throw std::runtime_error("Model data is empty. Call load_comm_model_data() first.");
+    
+    // Find the wave height entries in our table that bracket the current wave height
+    auto it_upper = model_data_.lower_bound(current_wave_height);
+    
+    // Handle edge cases: if outside the wave height range, clamp to the nearest data.
+    if (it_upper == model_data_.end()) return get_distance_for_wave_height(model_data_.rbegin()->first, required_comms_window);
+    if (it_upper == model_data_.begin()) return get_distance_for_wave_height(it_upper->first, required_comms_window);
+    
+    auto it_lower = std::prev(it_upper);
+    double lower_wave_ht = it_lower->first;
+    double upper_wave_ht = it_upper->first;
+    
+    // For each of the two bracketing wave heights, find the max distance for the required comms window.
+    double dist_lower = get_distance_for_wave_height(lower_wave_ht, required_comms_window);
+    double dist_upper = get_distance_for_wave_height(upper_wave_ht, required_comms_window);
+    
+    // If the wave height is an exact match, no final interpolation needed.
+    if (std::abs(upper_wave_ht - lower_wave_ht) < 1e-6) return dist_lower;
+    
+    // Perform the final interpolation across the wave height dimension.
+    double factor = (current_wave_height - lower_wave_ht) / (upper_wave_ht - lower_wave_ht);
+    return dist_lower + factor * (dist_upper - dist_lower);
+}
+
+/**
+ * @brief Predicts the communication window for a given wave height and distance using 2D interpolation.
+ * @return The predicted communication window percentage.
+ */
+double get_predicted_comms_window(double current_wave_height, double current_distance) {
+    if (model_data_.empty()) throw std::runtime_error("Model data is empty. Call load_comm_model_data() first.");
+    auto it_upper = model_data_.lower_bound(current_wave_height);
+    if (it_upper == model_data_.end()) return get_comms_for_wave_height(model_data_.rbegin()->first, current_distance);
+    if (it_upper == model_data_.begin()) return get_comms_for_wave_height(it_upper->first, current_distance);
+    auto it_lower = std::prev(it_upper);
+    double lower_wave_ht = it_lower->first;
+    double upper_wave_ht = it_upper->first;
+    double comms_lower = get_comms_for_wave_height(lower_wave_ht, current_distance);
+    double comms_upper = get_comms_for_wave_height(upper_wave_ht, current_distance);
+    if (std::abs(upper_wave_ht - lower_wave_ht) < 1e-6) return comms_lower;
+    double factor = (current_wave_height - lower_wave_ht) / (upper_wave_ht - lower_wave_ht);
+    return comms_lower + factor * (comms_upper - comms_lower);
+}
+
+
+// --- Helper Function Implementations ---
+
+/**
+ * @brief (Helper) For a single, specific wave height from the table, finds the maximum distance
+ * that provides the required comms window, using linear interpolation on the distance axis.
+ */
+double get_distance_for_wave_height(double wave_height, double required_comms_window) {
+    const auto& data_points = model_data_.at(wave_height);
+    
+    // Find the first data point where the comms window is less than or equal to the required one.
+    // Since comms window decreases as distance increases, this gives us the upper-bound point for interpolation.
+    auto it_upper = std::lower_bound(data_points.begin(), data_points.end(), required_comms_window,
+        [](const DistanceCommData& point, double val) { return point.comms_window_pct > val; });
+    
+    // Handle edge cases: If the required comms is outside the table's range for this wave height,
+    // return the maximum or minimum distance available in the table.
+    if (it_upper == data_points.end()) return data_points.back().distance_m; // Required comms is better than we can do, so return max distance
+    if (it_upper == data_points.begin()) return data_points.front().distance_m; // Cannot meet requirement, return min distance
+
+    auto it_lower = std::prev(it_upper);
+    const auto& p1 = *it_lower; // Point with higher comms, lower distance
+    const auto& p2 = *it_upper; // Point with lower comms, higher distance
+    
+    // Avoid division by zero if comms values are identical
+    if (std::abs(p1.comms_window_pct - p2.comms_window_pct) < 1e-6) return p1.distance_m;
+    
+    // Linearly interpolate to find the distance that exactly matches the required comms window
+    double factor = (required_comms_window - p2.comms_window_pct) / (p1.comms_window_pct - p2.comms_window_pct);
+    return p2.distance_m + factor * (p1.distance_m - p2.distance_m);
+}
+
+/**
+ * @brief (Helper) For a single wave height, finds the comms window for a given distance.
+ */
+double get_comms_for_wave_height(double wave_height, double current_distance) {
+    const auto& data_points = model_data_.at(wave_height);
+    auto it_upper = std::lower_bound(data_points.begin(), data_points.end(), current_distance,
+        [](const DistanceCommData& point, double val) { return point.distance_m < val; });
+    if (it_upper == data_points.end()) return data_points.back().comms_window_pct;
+    if (it_upper == data_points.begin()) return data_points.front().comms_window_pct;
+    auto it_lower = std::prev(it_upper);
+    const auto& p1 = *it_lower;
+    const auto& p2 = *it_upper;
+    if (std::abs(p1.distance_m - p2.distance_m) < 1e-6) return p1.comms_window_pct;
+    double factor = (current_distance - p1.distance_m) / (p2.distance_m - p1.distance_m);
+    return p1.comms_window_pct + factor * (p2.comms_window_pct - p1.comms_window_pct);
+}
+
+
+
 int main() {
+    // Load the model data once
+    std::filesystem::path root_dir = std::filesystem::current_path().parent_path();
+    std::filesystem::path results_dir = root_dir / "results_range_table";
+
+    if (!std::filesystem::exists(results_dir)) {
+        if (!std::filesystem::create_directory(results_dir)) {
+            std::cerr << "Failed to create results directory.\n";
+            return 1;
+        }
+    } else {
+        std::cout << results_dir << " already exists. Continuing execution.\n";
+    }
+    std::filesystem::path results_file_path_comms_window_case_study = results_dir / ("comms_window_case_study.csv");
+    load_comm_model_data(results_file_path_comms_window_case_study);
+
     // Formation parameters
     const size_t swarm_size             = 6;
     const double proximity_threashold   = 10.0;   // Proximity to circle
-    const double formation_radius       = 1000.0;  // m
+    double formation_radius             = 1000.0;  // m
     const double field_length           = 2500.0; // m
     const double formation_centre_x     = 0.0;    // m
     const double formation_centre_y     = 0.0;    // m
     const double radio_range = formation_radius;  // m
     ASVLite::Geometry::Coordinates3D formation_center {formation_centre_x, formation_centre_y, 0.0};
     const double k_circle    = 1.0; // N/m
-    const double k_neighbour = 1.0; // N/m
+    const double k_neighbour = 0.0; // N/m
     const double k_dismissal = 1.0; // N/m
+
+    // Comms parameters
+    const double required_comms_window = 70.0; // %
 
     // Random number generator
     const int rng_seed = 1;  
@@ -46,12 +221,6 @@ int main() {
         if(p21.norm() <= radio_range) {
             F = -k_neighbour * (radio_range - p21.norm())/p21.norm() * p21; // Repulsion from neighbours
         }
-        // If the neighbor is in the circle
-        Eigen::Vector2d p0 {formation_center.keys.x, formation_center.keys.y}; 
-        Eigen::Vector2d p02 = p0 - p2;
-        if(abs(p02.norm() - formation_radius) <= proximity_threashold) {
-            F = 3 * F;
-        } 
         return F;
     };
 
@@ -78,8 +247,8 @@ int main() {
     std::vector<ASVLite::Asv<N>> swarm;
     for(size_t i = 0; i < swarm_size; ++i) {
         double angle = i*(2.0*M_PI)/swarm_size;
-        double x = formation_center.keys.x + (formation_radius * std::cos(angle));
-        double y = formation_center.keys.y + (formation_radius * std::sin(angle));
+        double x = formation_center.keys.x + (formation_radius * std::cos(angle + M_PI/6));
+        double y = formation_center.keys.y + (formation_radius * std::sin(angle + M_PI/6));
         const double heading = std::atan2(x, y); 
         const double z = 0.0;
         const ASVLite::Geometry::Coordinates3D position {x, y, 0};
@@ -93,14 +262,6 @@ int main() {
     std::vector<std::vector<double>> y_paths; // y coordinate of the paths traced by the vehicles in the swarm
     x_paths.resize(swarm_size);
     y_paths.resize(swarm_size);
-    std::vector<double> x_circle; // x coordinates of points around the formation circle
-    std::vector<double> y_circle; // y coordinates of points around the formation circle
-    const int num_points_circle = 100; // number of points to plot on the formation circle
-    for (int i = 0; i <= num_points_circle; ++i) {
-        double theta = 2.0 * M_PI * i / num_points_circle;
-        x_circle.push_back(formation_centre_x + formation_radius * std::cos(theta));
-        y_circle.push_back(formation_centre_x + formation_radius * std::sin(theta));
-    } 
     int sim_update_frequency = 1.0 * 60 * (1000 / 40); // Update every minutes
     int sim_update_cycle_counter = 0;
     int sea_state_update_frequency = 15.0  * 60 * (1000 / 40); // Update every 15 minutes
@@ -111,6 +272,12 @@ int main() {
         const ASVLite::SeaSurface<N> sea_surface_updated {wave_ht, wave_dp, wave_rand_seed};
         for(size_t i = 0; i < swarm_size; ++i) {
             swarm[i].set_sea_state(&sea_surface_updated);
+        }
+        // Update formation_radius for the sea state
+        // Get the new maximum allowable distance to maintain the required comms window
+        double new_distance = get_max_allowable_distance(wave_ht, required_comms_window);
+        if(new_distance < formation_radius) {
+            formation_radius = new_distance;
         }
         for(double time = 0; time < simulation_time;) {
             if(sea_state_update_counter == sea_state_update_frequency) {
@@ -201,6 +368,14 @@ int main() {
                     plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
                 }
                 // 2. Draw circle formation
+                std::vector<double> x_circle; // x coordinates of points around the formation circle
+                std::vector<double> y_circle; // y coordinates of points around the formation circle
+                const int num_points_circle = 100; // number of points to plot on the formation circle
+                for (int i = 0; i <= num_points_circle; ++i) {
+                    double theta = 2.0 * M_PI * i / num_points_circle;
+                    x_circle.push_back(formation_centre_x + formation_radius * std::cos(theta));
+                    y_circle.push_back(formation_centre_x + formation_radius * std::sin(theta));
+                } 
                 plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
                 // 3. Draw vehicle paths in a darker color
                 for (size_t i = 0; i < swarm_size; ++i) {
@@ -214,9 +389,17 @@ int main() {
                     plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", color}, {"marker", "o"}, {"markersize", "4"}});
                 }
                 // 5. Show sea state on top-right
-                std::string text = "Sig wave ht: " + std::to_string(time);
+                std::string text = "Time: " + std::to_string(time) + " sec";
                 double text_x = axis_max - 0.15 * (axis_max - axis_min);
                 double text_y = axis_max - 0.05 * (axis_max - axis_min);
+                plt::text(text_x, text_y, text);
+                text = "Sig wave ht: " + std::to_string(wave_ht) + " m";
+                text_x = axis_max - 0.15 * (axis_max - axis_min);
+                text_y = axis_max - 0.075 * (axis_max - axis_min);
+                plt::text(text_x, text_y, text);
+                text = "Formation radius: " + std::to_string(formation_radius) + " m";
+                text_x = axis_max - 0.15 * (axis_max - axis_min);
+                text_y = axis_max - 0.125 * (axis_max - axis_min);
                 plt::text(text_x, text_y, text);
                 // 6. Final plot config
                 plt::xlim(axis_min, axis_max);
@@ -236,67 +419,67 @@ int main() {
         }    
     }
     
-    // Plot the final reault to file
-    // 1. Draw vector field in the background
-    std::vector<double> X, Y, U, V;
-    const double dx = 50.0;
-    double axis_min = -field_length / 2.0;
-    double axis_max =  field_length / 2.0;
-    for (double x = axis_min; x <= axis_max; x += dx) {
-        for (double y = axis_min; y <= axis_max; y += dx) {
-            ASVLite::Geometry::Coordinates3D position {x, y, 0.0};
-            Eigen::Vector2d F = Eigen::Vector2d::Zero();
-            F += get_F_circle(position);
-            for (size_t j = 0; j < swarm_size; ++j) {
-                const ASVLite::Geometry::Coordinates3D neighbour_position = swarm[j].get_position();
-                F += get_F_neighbour(position, neighbour_position);
-            }
-            X.push_back(x);
-            Y.push_back(y);
-            U.push_back(F.x());
-            V.push_back(F.y());
-        }
-    }
-    for (size_t i = 0; i < X.size(); ++i) {
-        double x_start = X[i];
-        double y_start = Y[i];
-        double x_end = x_start + 0.1 * U[i];
-        double y_end = y_start + 0.1 * V[i];
-        std::vector<double> xs = {x_start, x_end};
-        std::vector<double> ys = {y_start, y_end};
-        plt::plot(xs, ys, {{"color", "#a6cee3"}});  // Light blue arrows
-        // Arrowhead
-        double arrow_len = 5.0;
-        double angle = std::atan2(V[i], U[i]);
-        double left_angle = angle + M_PI - M_PI / 6.0;
-        double right_angle = angle + M_PI + M_PI / 6.0;
-        double x_left = x_end + arrow_len * std::cos(left_angle);
-        double y_left = y_end + arrow_len * std::sin(left_angle);
-        double x_right = x_end + arrow_len * std::cos(right_angle);
-        double y_right = y_end + arrow_len * std::sin(right_angle);
-        plt::plot({x_end, x_left}, {y_end, y_left}, {{"color", "#a6cee3"}});
-        plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
-    }
-    // 2. Draw circle formation
-    plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
-    // 3. Draw vehicle paths in light grey
-    for (size_t i = 0; i < swarm_size; ++i) {
-        plt::plot(x_paths[i], y_paths[i], {{"color", "#cccccc"}});
-    }
-    // 4. Draw current vehicle positions in red
-    for (size_t i = 0; i < swarm_size; ++i) {
-        const ASVLite::Geometry::Coordinates3D pos = swarm[i].get_position();
-        plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", "red"}, {"marker", "o"}, {"markersize", "4"}});
-    }
-    // 5. Final layout and render
-    plt::xlim(axis_min, axis_max);
-    plt::ylim(axis_min, axis_max);
-    plt::axis("equal");
-    plt::title("ASV Swarm: Paths, Forces & Positions");
-    plt::tight_layout();
-    // Save to file or show once
-    plt::show();
-    // plt::save("asv_final_state.png");
+    // // Plot the final reault to file
+    // // 1. Draw vector field in the background
+    // std::vector<double> X, Y, U, V;
+    // const double dx = 50.0;
+    // double axis_min = -field_length / 2.0;
+    // double axis_max =  field_length / 2.0;
+    // for (double x = axis_min; x <= axis_max; x += dx) {
+    //     for (double y = axis_min; y <= axis_max; y += dx) {
+    //         ASVLite::Geometry::Coordinates3D position {x, y, 0.0};
+    //         Eigen::Vector2d F = Eigen::Vector2d::Zero();
+    //         F += get_F_circle(position);
+    //         for (size_t j = 0; j < swarm_size; ++j) {
+    //             const ASVLite::Geometry::Coordinates3D neighbour_position = swarm[j].get_position();
+    //             F += get_F_neighbour(position, neighbour_position);
+    //         }
+    //         X.push_back(x);
+    //         Y.push_back(y);
+    //         U.push_back(F.x());
+    //         V.push_back(F.y());
+    //     }
+    // }
+    // for (size_t i = 0; i < X.size(); ++i) {
+    //     double x_start = X[i];
+    //     double y_start = Y[i];
+    //     double x_end = x_start + 0.1 * U[i];
+    //     double y_end = y_start + 0.1 * V[i];
+    //     std::vector<double> xs = {x_start, x_end};
+    //     std::vector<double> ys = {y_start, y_end};
+    //     plt::plot(xs, ys, {{"color", "#a6cee3"}});  // Light blue arrows
+    //     // Arrowhead
+    //     double arrow_len = 5.0;
+    //     double angle = std::atan2(V[i], U[i]);
+    //     double left_angle = angle + M_PI - M_PI / 6.0;
+    //     double right_angle = angle + M_PI + M_PI / 6.0;
+    //     double x_left = x_end + arrow_len * std::cos(left_angle);
+    //     double y_left = y_end + arrow_len * std::sin(left_angle);
+    //     double x_right = x_end + arrow_len * std::cos(right_angle);
+    //     double y_right = y_end + arrow_len * std::sin(right_angle);
+    //     plt::plot({x_end, x_left}, {y_end, y_left}, {{"color", "#a6cee3"}});
+    //     plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
+    // }
+    // // 2. Draw circle formation
+    // plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
+    // // 3. Draw vehicle paths in light grey
+    // for (size_t i = 0; i < swarm_size; ++i) {
+    //     plt::plot(x_paths[i], y_paths[i], {{"color", "#cccccc"}});
+    // }
+    // // 4. Draw current vehicle positions in red
+    // for (size_t i = 0; i < swarm_size; ++i) {
+    //     const ASVLite::Geometry::Coordinates3D pos = swarm[i].get_position();
+    //     plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", "red"}, {"marker", "o"}, {"markersize", "4"}});
+    // }
+    // // 5. Final layout and render
+    // plt::xlim(axis_min, axis_max);
+    // plt::ylim(axis_min, axis_max);
+    // plt::axis("equal");
+    // plt::title("ASV Swarm: Paths, Forces & Positions");
+    // plt::tight_layout();
+    // // Save to file or show once
+    // plt::show();
+    // // plt::save("asv_final_state.png");
 
 
     return 0;
