@@ -101,16 +101,24 @@ int main() {
         x_circle.push_back(formation_centre_x + formation_radius * std::cos(theta));
         y_circle.push_back(formation_centre_x + formation_radius * std::sin(theta));
     } 
-    int sim_update_frequency = 0.5 * 60 * (1000 / 40); // Update every minutes
+    int sim_update_frequency = 1.0 * 60 * (1000 / 40); // Update every minutes
     int sim_update_cycle_counter = 0;
-    const double simulation_time_per_sea_state = 30.0 * 60.0; // sec   
+    int sea_state_update_frequency = 15.0  * 60 * (1000 / 40); // Update every 15 minutes
+    int sea_state_update_counter = 0;
+    const double simulation_time = 300.0 * 60.0; // sec   
     for(double wave_ht = 2.0; wave_ht <= 6.0; wave_ht+=0.5) {
         // Update sea surface
         const ASVLite::SeaSurface<N> sea_surface_updated {wave_ht, wave_dp, wave_rand_seed};
         for(size_t i = 0; i < swarm_size; ++i) {
             swarm[i].set_sea_state(&sea_surface_updated);
         }
-        for(double time = 0; time < simulation_time_per_sea_state;) {
+        for(double time = 0; time < simulation_time;) {
+            if(sea_state_update_counter == sea_state_update_frequency) {
+                sea_state_update_counter = 0.0;
+                break;
+            } else {
+                ++sea_state_update_counter;
+            }
             Eigen::Matrix<double, swarm_size, 2> F_circle    = Eigen::Matrix<double, swarm_size, 2>::Zero(); // Artifical attractive force to circle
             Eigen::Matrix<double, swarm_size, 2> F_neighbour = Eigen::Matrix<double, swarm_size, 2>::Zero(); // Net artificial force due to neighbours that are within the radio range
             // For each vehicle in the swarm, compute the net force
