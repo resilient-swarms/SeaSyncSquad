@@ -23,26 +23,27 @@ set( SOURCE
         # source/source/flux_asv.cpp
         # source/source/main_icgs.cpp
         # source/source/main_flux.cpp
-        source/source/main_range_table.cpp
+        source/source/adaptive_formation_control.cpp
+        # source/source/main_range_table.cpp
         # source/source/temp.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
 
-# add_subdirectory(dependency/matplotlib-cpp)
+add_subdirectory(dependency/matplotlib-cpp)
 # add_subdirectory(dependency/netcdf-cxx4)
 
 find_package(Threads REQUIRED)
 # find_package(GeographicLib REQUIRED)
-# find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-# find_package(Python3 COMPONENTS NumPy REQUIRED)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS NumPy REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         Threads::Threads
         # ${GeographicLib_LIBRARIES}
         # netcdf-cxx4
-        # Python3::Python
-        # Python3::Module
-        # Python3::NumPy
+        Python::Python
+        Python::Module
+        Python::NumPy
         Eigen3::Eigen)
