@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib
+import matplotlib.image as mpimg
 
 # ==============================
 # Global Plot Settings
@@ -62,7 +63,7 @@ marker_styles_ant = ['o', 's', '^', 'D', 'v', 'p']
 marker_styles_dist = ['o', 'X', 's', '^', 'D', 'v']
 
 # ==============================
-# Plot 1: Diffraction Loss (Updated for Clarity)
+# Plot 1: Diffraction Loss 
 # ==============================
 
 df = pd.read_csv(dir_results.joinpath("diffraction.csv"))
@@ -163,7 +164,7 @@ plt.savefig(dir_results.joinpath("sea_spray_attenuation.png"), bbox_inches="tigh
 plt.close()
 
 # ==============================
-# Plot 5: Comms Window (Updated for Clarity)
+# Plot 5: Comms Window 
 # ==============================
 
 df_comms = pd.read_csv(dir_results.joinpath("comms_window.csv"))
@@ -186,7 +187,7 @@ plt.close()
 
 
 # =================================
-# Plot 6: Comms Window - Case study (Updated for Clarity)
+# Plot 6: Comms Window - Case study 
 # =================================
 
 df_case_study = pd.read_csv(dir_results.joinpath("comms_window_case_study.csv"))
@@ -205,4 +206,31 @@ plt.ylabel('Obstruction-Free Link Time (%)')
 plt.legend(title='Distance (m)', bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
 plt.savefig(dir_results.joinpath("comms_window_case_study.png"), bbox_inches="tight")
+plt.close()
+
+
+# ==============================
+# Plot 7: Simulation - swarm path
+# ==============================
+# List your 4 PNG image file paths here
+image_files = [
+    "case_study2.000000.png",
+    "case_study4.000000.png",
+    "case_study5.000000.png",
+    "case_study6.000000.png",
+]
+# Create a 2x2 subplot
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+# Flatten axes array for easier indexing
+axes = axes.flatten()
+# Loop through images and plot them
+for i, img_file in enumerate(image_files):
+    img = mpimg.imread(dir_results.joinpath(img_file))
+    axes[i].imshow(img)
+    axes[i].axis('off')  # Hide axis ticks
+    sea_state = {0:2.0, 1:4.0, 2:5.0, 3:6.0}
+    axes[i].set_title(f"Significant Wave Height = {sea_state[i]} m")
+
+plt.tight_layout()
+plt.savefig(dir_results.joinpath("combined_subplot.png"))
 plt.close()

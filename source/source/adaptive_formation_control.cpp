@@ -347,7 +347,6 @@ int main() {
                 plt::xlim(axis_min, axis_max);
                 plt::ylim(axis_min, axis_max);
                 plt::axis("equal");
-                plt::title("ASV Swarm: Paths, Forces & Positions");
                 plt::tight_layout();
                 // Save to file or show once
                 std::filesystem::path formation_plot = results_dir / ("case_study" + std::to_string(wave_ht) + ".png");
