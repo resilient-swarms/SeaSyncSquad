@@ -276,6 +276,8 @@ int main() {
     int animation_update_cycle_counter = 0;
     int sea_state_update_frequency = 30.0  * 60 * (1000 / 40); // Update every 30 minutes
     int sea_state_update_counter = 0;
+    int comms_update_frequency = 5 * 60 * (1000 / 40); // Update every 5 minutes
+    int comms_update_counter = 0;
     for(double wave_ht = 2.0; wave_ht <= 6.0; wave_ht+=0.5) {
         // Update sea surface
         const ASVLite::SeaSurface<N> sea_surface_updated {wave_ht, wave_dp, wave_rand_seed};
@@ -410,40 +412,46 @@ int main() {
 
             // Compute the comms window for adjacent pairs of vehicles
             if (!run_animation) {
-                std::vector<std::future<std::pair<double, double>>> comms_window_futures;
-                for (size_t i = 0; i < swarm_size; ++i) {
-                    comms_window_futures.push_back(std::async(std::launch::async, [=]() {
-                        size_t j = (i == swarm_size - 1) ? 0 : i + 1;
-                        const double threshold = 20.0; // dB
-                        auto position_i = swarm[i].get_position();
-                        auto position_j = swarm[j].get_position();
-                        double dx = position_i.keys.x - position_j.keys.x;
-                        double dy = position_i.keys.y - position_j.keys.y;
-                        double distance = std::sqrt(dx * dx + dy * dy);
-                        const double time_duration = 5 * 60.0; // sec 
-                        double loss = get_comms_window_loss(threshold, radio_frequency, antenna_height, distance, sea_surface_updated, time_duration);
-                        return std::make_pair(loss, distance);
-                    }));
+                if(comms_update_counter == comms_update_frequency) {
+                    std::vector<std::future<std::pair<double, double>>> comms_window_futures;
+                    for (size_t i = 0; i < swarm_size; ++i) {
+                        comms_window_futures.push_back(std::async(std::launch::async, [=]() {
+                            size_t j = (i == swarm_size - 1) ? 0 : i + 1;
+                            const double threshold = 20.0; // dB
+                            auto position_i = swarm[i].get_position();
+                            auto position_j = swarm[j].get_position();
+                            double dx = position_i.keys.x - position_j.keys.x;
+                            double dy = position_i.keys.y - position_j.keys.y;
+                            double distance = std::sqrt(dx * dx + dy * dy);
+                            const double time_duration = 60.0; // sec 
+                            double loss = get_comms_window_loss(threshold, radio_frequency, antenna_height, distance, sea_surface_updated, time_duration);
+                            return std::make_pair(loss, distance);
+                        }));
+                    }
+                    // Collect the results from all the futures (threads)
+                    std::vector<double> comms_window_losses;
+                    std::vector<double> distances;
+                    comms_window_losses.reserve(comms_window_futures.size());
+                    distances.reserve(comms_window_futures.size());
+
+                    for (auto& fut : comms_window_futures) {
+                        auto loss_and_dist = fut.get();  
+                        comms_window_losses.push_back(loss_and_dist.first);
+                        distances.push_back(loss_and_dist.second);
+                    }
+
+                    // Calculate the min comms_window for the swarm
+                    auto min_iter = std::min_element(comms_window_losses.begin(), comms_window_losses.end());
+                    size_t min_index = std::distance(comms_window_losses.begin(), min_iter);
+
+                    // Write the values to the CSV file
+                    const double min_comms_window = 100.0 - comms_window_losses[min_index];
+                    results_file_swarm_adaptation_sim << wave_ht << "," << distances[min_index] << "," << min_comms_window << "\n";
+
+                    comms_update_counter = 0;
+                } else {
+                    ++comms_update_counter;
                 }
-                // Collect the results from all the futures (threads)
-                std::vector<double> comms_window_losses;
-                std::vector<double> distances;
-                comms_window_losses.reserve(comms_window_futures.size());
-                distances.reserve(comms_window_futures.size());
-
-                for (auto& fut : comms_window_futures) {
-                    auto loss_and_dist = fut.get();  
-                    comms_window_losses.push_back(loss_and_dist.first);
-                    distances.push_back(loss_and_dist.second);
-                }
-
-                // Calculate the min comms_window for the swarm
-                auto min_iter = std::min_element(comms_window_losses.begin(), comms_window_losses.end());
-                size_t min_index = std::distance(comms_window_losses.begin(), min_iter);
-
-                // Write the values to the CSV file
-                const double min_comms_window = 100.0 - comms_window_losses[min_index];
-                results_file_swarm_adaptation_sim << wave_ht << "," << distances[min_index] << "," << min_comms_window << "\n";
             }
             
             // Update Animation

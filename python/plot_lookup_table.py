@@ -241,26 +241,28 @@ plt.close()
 
 # Load data
 df_comms = pd.read_csv(dir_results.joinpath("swarm_adaptation_sim.csv"))
-df_comms['Index'] = df_comms.index
+df_comms['Index'] = 5 * df_comms.index
 
-# Define colour palette
+# Define wave heights and ensure categorical ordering
 wave_hts = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0]
-palette_wave = sns.color_palette("rocket_r", len(wave_hts))
+df_comms['wave_ht(m)'] = pd.Categorical(df_comms['wave_ht(m)'], categories=wave_hts, ordered=True)
 
 # Create subplots
 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6, 6), sharex=True)
 
 # First subplot: comms window %
 sns.scatterplot(ax=axes[0], data=df_comms, x='Index', y='comms_window(%)',
-                hue='wave_ht(m)', palette=palette_wave, s=20, alpha=0.8,
-                edgecolor='black', linewidth=0.2)
+                hue='wave_ht(m)', style='wave_ht(m)',
+                palette=sns.color_palette("rocket_r", len(wave_hts)),
+                s=40, alpha=0.8, edgecolor='black', linewidth=0.0)
 axes[0].set_ylabel('Obstruction-Free Link Time (%)')
-axes[0].legend(title='Wave Height (m)', loc='upper right')
+axes[0].legend(title='Wave Height (m)', bbox_to_anchor=(1.05, 1), loc='upper left')
 
 # Second subplot: inter-vehicle distance
 sns.scatterplot(ax=axes[1], data=df_comms, x='Index', y='dist(m)',
-                hue='wave_ht(m)', palette=palette_wave, s=20, alpha=0.8,
-                edgecolor='black', linewidth=0.2, legend=False)
+                hue='wave_ht(m)', style='wave_ht(m)',
+                palette=sns.color_palette("rocket_r", len(wave_hts)),
+                s=40, alpha=0.8, edgecolor='black', linewidth=0.0, legend=False)
 axes[1].set_xlabel('Simulation Time (minutes)')
 axes[1].set_ylabel('Max Inter-Vehicle Distance (m)')
 
