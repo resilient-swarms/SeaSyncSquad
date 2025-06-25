@@ -195,10 +195,9 @@ int main() {
     const double field_length           = 2500.0; // m
     const double formation_centre_x     = 0.0;    // m
     const double formation_centre_y     = 0.0;    // m
-    const double radio_range = formation_radius;  // m
     ASVLite::Geometry::Coordinates3D formation_center {formation_centre_x, formation_centre_y, 0.0};
     const double k_circle    = 1.0; // N/m
-    const double k_neighbour = 0.0; // N/m
+    const double k_neighbour = 1.0; // N/m
     const double k_dismissal = 1.0; // N/m
 
     // Comms parameters
@@ -223,8 +222,8 @@ int main() {
         Eigen::Vector2d p2 {position_2.keys.x, position_2.keys.y}; 
         Eigen::Vector2d p21 = (p2 - p1); 
         Eigen::Vector2d F = Eigen::Vector2d::Zero();
-        if(p21.norm() <= radio_range) {
-            F = -k_neighbour * (radio_range - p21.norm())/p21.norm() * p21; // Repulsion from neighbours
+        if(p21.norm() <= formation_radius) {
+            F = -k_neighbour * (formation_radius - p21.norm())/p21.norm() * p21; // Repulsion from neighbours
         }
         return F;
     };
