@@ -234,3 +234,38 @@ for i, img_file in enumerate(image_files):
 plt.tight_layout()
 plt.savefig(dir_results.joinpath("combined_subplot.png"))
 plt.close()
+
+# ==============================
+# Plot 8: Simulation - swarm comms window
+# ==============================
+
+# Load data
+df_comms = pd.read_csv(dir_results.joinpath("swarm_adaptation_sim.csv"))
+df_comms['Index'] = df_comms.index
+
+# Define colour palette
+wave_hts = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0]
+palette_wave = sns.color_palette("rocket_r", len(wave_hts))
+
+# Create subplots
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6, 6), sharex=True)
+
+# First subplot: comms window %
+sns.scatterplot(ax=axes[0], data=df_comms, x='Index', y='comms_window(%)',
+                hue='wave_ht(m)', palette=palette_wave, s=20, alpha=0.8,
+                edgecolor='black', linewidth=0.2)
+axes[0].set_ylabel('Obstruction-Free Link Time (%)')
+axes[0].legend(title='Wave Height (m)', loc='upper right')
+
+# Second subplot: inter-vehicle distance
+sns.scatterplot(ax=axes[1], data=df_comms, x='Index', y='dist(m)',
+                hue='wave_ht(m)', palette=palette_wave, s=20, alpha=0.8,
+                edgecolor='black', linewidth=0.2, legend=False)
+axes[1].set_xlabel('Simulation Time (minutes)')
+axes[1].set_ylabel('Max Inter-Vehicle Distance (m)')
+
+# Final adjustments and save
+plt.tight_layout()
+plt.savefig(dir_results.joinpath("swarm_adaptation_sim.png"), dpi=300, bbox_inches='tight')
+plt.close()
+
