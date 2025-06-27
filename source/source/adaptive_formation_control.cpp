@@ -277,7 +277,12 @@ int main() {
     int sea_state_update_counter = 0;
     int comms_update_frequency = 5 * 60 * (1000 / 40); // Update every 5 minutes
     int comms_update_counter = 0;
-    for(double wave_ht = 2.0; wave_ht <= 6.0; wave_ht+=0.5) {
+    std::string plot_file_name_subscript = std::to_string(1);
+    std::vector<double> wave_hts {2.0, 3.0, 4.0, 5.0, 6.0, 5.0, 4.0, 3.0, 2.0}; 
+    for(const double wave_ht : wave_hts) {
+        if(wave_ht == 6.0) {
+            plot_file_name_subscript = std::to_string(2);
+        }
         // Update sea surface
         const ASVLite::SeaSurface<N> sea_surface_updated {wave_ht, wave_dp, wave_rand_seed};
         for(size_t i = 0; i < swarm_size; ++i) {
@@ -285,10 +290,8 @@ int main() {
         }
         // Update formation_radius for the sea state
         // Get the new maximum allowable distance to maintain the required comms window
-        double new_distance = get_max_allowable_distance(std::min(wave_ht+0.5, 6.0), required_comms_window);
-        if(new_distance < formation_radius) {
-            formation_radius = new_distance;
-        }
+        double new_distance = get_max_allowable_distance(std::min(wave_ht+1.0, 6.0), required_comms_window);
+        formation_radius = new_distance;
         for(double time = 0; ;) {
             if(sea_state_update_counter == sea_state_update_frequency) {
                 if(! run_animation) {
@@ -360,7 +363,7 @@ int main() {
                     plt::axis("equal");
                     plt::tight_layout();
                     // Save to file or show once
-                    std::filesystem::path formation_plot = results_dir / ("case_study" + std::to_string(wave_ht) + ".png");
+                    std::filesystem::path formation_plot = results_dir / ("case_study" + std::to_string(wave_ht) + "_" + plot_file_name_subscript + ".png");
                     plt::save(formation_plot);
                 }
 
@@ -422,7 +425,7 @@ int main() {
                             double dx = position_i.keys.x - position_j.keys.x;
                             double dy = position_i.keys.y - position_j.keys.y;
                             double distance = std::sqrt(dx * dx + dy * dy);
-                            const double time_duration = 60.0; // sec 
+                            const double time_duration = 30 * 60.0; // sec 
                             double loss = get_comms_window_loss(threshold, radio_frequency, antenna_height, distance, sea_surface_updated, time_duration);
                             return std::make_pair(loss, distance);
                         }));

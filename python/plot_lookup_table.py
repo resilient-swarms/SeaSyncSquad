@@ -213,26 +213,43 @@ plt.close()
 # Plot 7: Simulation - swarm path
 # ==============================
 # List your 4 PNG image file paths here
+# List your 8 PNG image file paths here
 image_files = [
-    "case_study2.000000.png",
-    "case_study4.000000.png",
-    "case_study5.000000.png",
-    "case_study6.000000.png",
+    "case_study2.000000_1.png",
+    "case_study3.000000_1.png",
+    "case_study4.000000_1.png",
+    "case_study5.000000_1.png",
+    "case_study6.000000_2.png",
+    "case_study5.000000_2.png",
+    "case_study4.000000_2.png",
+    "case_study2.000000_2.png",
 ]
-# Create a 2x2 subplot
-fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-# Flatten axes array for easier indexing
+
+# Create 4x2 subplots to fit on A4 portrait
+fig, axes = plt.subplots(
+    4, 2,
+    figsize=(8.27, 11.69),  # A4 in inches (portrait)
+    gridspec_kw={'wspace': 0.02, 'hspace': 0.08}
+)
+
+# Flatten for indexing
 axes = axes.flatten()
-# Loop through images and plot them
+
+# Wave heights
+sea_state = {
+    0: 2.0, 1: 3.0, 2: 4.0, 3: 5.0,
+    4: 6.0, 5: 5.0, 6: 4.0, 7: 2.0
+}
+
+# Load and plot images
 for i, img_file in enumerate(image_files):
     img = mpimg.imread(dir_results.joinpath(img_file))
     axes[i].imshow(img)
-    axes[i].axis('off')  # Hide axis ticks
-    sea_state = {0:2.0, 1:4.0, 2:5.0, 3:6.0}
-    axes[i].set_title(f"Significant Wave Height = {sea_state[i]} m")
+    axes[i].axis('off')
+    axes[i].set_title(f"Significant Wave Height = {sea_state[i]} m", fontsize=9)
 
-plt.tight_layout()
-plt.savefig(dir_results.joinpath("combined_subplot.png"))
+# Save to file
+plt.savefig(dir_results.joinpath("combined_subplot.png"), dpi=300, bbox_inches='tight')
 plt.close()
 
 # ==============================
