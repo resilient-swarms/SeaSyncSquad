@@ -272,6 +272,31 @@ sns.scatterplot(ax=axes[0], data=df_comms, x='Index', y='comms_window(%)',
                 hue='wave_ht(m)', style='wave_ht(m)',
                 palette=sns.color_palette("rocket_r", len(wave_hts)),
                 s=40, alpha=0.8, edgecolor='black', linewidth=0.0)
+# plot the grey dashed reference line 
+# Identify contiguous segments where 'wave_ht(m)' stays the same
+df_comms['wave_ht_group'] = (df_comms['wave_ht(m)'] != df_comms['wave_ht(m)'].shift()).cumsum()
+# For each segment, plot the same grey dashed reference line
+for _, segment in df_comms.groupby('wave_ht_group'):
+    sns.lineplot(
+        ax=axes[0],
+        data=segment,
+        x='Index',
+        y='ref_comms_window(%)',
+        color='grey',
+        linestyle='--',
+        linewidth=1.0,
+        alpha=1.0
+    )
+
+# Add red dashed horizontal line at y=70
+axes[0].axhline(
+    y=70,
+    color='red',
+    linestyle='--',
+    linewidth=1.0,
+    alpha=0.8
+)
+
 axes[0].set_ylabel('Obstruction-Free Link Time (%)')
 axes[0].legend(title='Wave Height (m)', bbox_to_anchor=(1.05, 1), loc='upper left')
 
