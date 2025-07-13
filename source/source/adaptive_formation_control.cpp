@@ -197,7 +197,7 @@ int main() {
     const double formation_centre_y     = 0.0;    // m
     ASVLite::Geometry::Coordinates3D formation_center {formation_centre_x, formation_centre_y, 0.0};
     const double k_circle    = 1.0; // N/m
-    const double k_neighbour = 1.0; // N/m
+    const double k_neighbour = 0.5; // N/m
     const double k_dismissal = 1.0; // N/m
 
     // Comms parameters
@@ -272,13 +272,11 @@ int main() {
     x_paths.resize(swarm_size);
     y_paths.resize(swarm_size);
     int animation_update_frequency = 1.0 * 60 * (1000 / 40); // Update every minutes
-    int animation_update_cycle_counter = 0;
     int sea_state_update_frequency = 30.0  * 60 * (1000 / 40); // Update every 30 minutes
-    int sea_state_update_counter = 0;
     int comms_update_frequency = 5 * 60 * (1000 / 40); // Update every 5 minutes
-    int comms_update_counter = 0;
     std::string plot_file_name_subscript = std::to_string(1);
     std::vector<double> wave_hts {2.0, 3.0, 4.0, 5.0, 6.0, 5.0, 4.0, 3.0, 2.0}; 
+    double time = 0;
     for(const double wave_ht : wave_hts) {
         if(wave_ht == 6.0) {
             plot_file_name_subscript = std::to_string(2);
@@ -292,88 +290,79 @@ int main() {
         // Get the new maximum allowable distance to maintain the required comms window
         double new_distance = get_max_allowable_distance(std::min(wave_ht+1.0, 6.0), required_comms_window);
         formation_radius = new_distance;
-        for(double time = 0; ;) {
-            if(sea_state_update_counter == sea_state_update_frequency) {
-                if(! run_animation) {
-                    // Plot to file for the timestep
-                    plt::clf();  // Clear previous frame
-                    // 1. Draw vector field in the background
-                    std::vector<double> X, Y, U, V;
-                    const double dx = 75.0;
-                    double axis_min = -field_length / 2.0;
-                    double axis_max =  field_length / 2.0;
-                    for (double x = axis_min; x <= axis_max; x += dx) {
-                        for (double y = axis_min; y <= axis_max; y += dx) {
-                            ASVLite::Geometry::Coordinates3D position {x, y, 0.0};
-                            Eigen::Vector2d F = Eigen::Vector2d::Zero();
-                            F += get_F_circle(position);
-                            for (size_t j = 0; j < swarm_size; ++j) {
-                                const ASVLite::Geometry::Coordinates3D neighbour_position = swarm[j].get_position();
-                                F += get_F_neighbour(position, neighbour_position);
-                            }
-                            X.push_back(x);
-                            Y.push_back(y);
-                            U.push_back(F.x());
-                            V.push_back(F.y());
-                        }
-                    }
-                    for (size_t i = 0; i < X.size(); ++i) {
-                        double x_start = X[i];
-                        double y_start = Y[i];
-                        double x_end = x_start + 0.1 * U[i];
-                        double y_end = y_start + 0.1 * V[i];
-                        std::vector<double> xs = {x_start, x_end};
-                        std::vector<double> ys = {y_start, y_end};
-                        plt::plot(xs, ys, {{"color", "#a6cee3"}});  // Light blue arrows
-                        // Arrowhead
-                        double arrow_len = 5.0;
-                        double angle = std::atan2(V[i], U[i]);
-                        double left_angle = angle + M_PI - M_PI / 6.0;
-                        double right_angle = angle + M_PI + M_PI / 6.0;
-                        double x_left = x_end + arrow_len * std::cos(left_angle);
-                        double y_left = y_end + arrow_len * std::sin(left_angle);
-                        double x_right = x_end + arrow_len * std::cos(right_angle);
-                        double y_right = y_end + arrow_len * std::sin(right_angle);
-                        plt::plot({x_end, x_left}, {y_end, y_left}, {{"color", "#a6cee3"}});
-                        plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
-                    }
-                    // 2. Draw circle formation
-                    std::vector<double> x_circle; // x coordinates of points around the formation circle
-                    std::vector<double> y_circle; // y coordinates of points around the formation circle
-                    const int num_points_circle = 100; // number of points to plot on the formation circle
-                    for (int i = 0; i <= num_points_circle; ++i) {
-                        double theta = 2.0 * M_PI * i / num_points_circle;
-                        x_circle.push_back(formation_centre_x + formation_radius * std::cos(theta));
-                        y_circle.push_back(formation_centre_x + formation_radius * std::sin(theta));
-                    } 
-                    plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
-                    // 3. Draw vehicle paths in a darker color
-                    for (size_t i = 0; i < swarm_size; ++i) {
-                        plt::plot(x_paths[i], y_paths[i], {{"color", "#444444"}});  // Dark grey
-                    }
-                    // 4. Draw current vehicle positions on top
-                    for (size_t i = 0; i < swarm_size; ++i) {
-                        const ASVLite::Geometry::Coordinates3D pos = swarm[i].get_position();
-                        std::string color = "black";
-                        plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", color}, {"marker", "o"}, {"markersize", "8"}});
-                    }
-                    // 5. Final layout and render
-                    plt::xlim(axis_min, axis_max);
-                    plt::ylim(axis_min, axis_max);
-                    plt::axis("equal");
-                    plt::tight_layout();
-                    // Save to file or show once
-                    std::filesystem::path formation_plot = results_dir / ("case_study" + std::to_string(wave_ht) + "_" + plot_file_name_subscript + ".png");
-                    plt::save(formation_plot);
+
+        // Plot to file for the timestep
+        plt::clf();  // Clear previous frame
+        // 1. Draw vector field in the background
+        std::vector<double> X, Y, U, V;
+        const double dx = 75.0;
+        double axis_min = -field_length / 2.0;
+        double axis_max =  field_length / 2.0;
+        for (double x = axis_min; x <= axis_max; x += dx) {
+            for (double y = axis_min; y <= axis_max; y += dx) {
+                ASVLite::Geometry::Coordinates3D position {x, y, 0.0};
+                Eigen::Vector2d F = Eigen::Vector2d::Zero();
+                F += get_F_circle(position);
+                for (size_t j = 0; j < swarm_size; ++j) {
+                    const ASVLite::Geometry::Coordinates3D neighbour_position = swarm[j].get_position();
+                    F += get_F_neighbour(position, neighbour_position);
                 }
-
-                // Update simulation parameters
-                sea_state_update_counter = 0.0;
-                break;
-
-            } else {
-                ++sea_state_update_counter;
+                X.push_back(x);
+                Y.push_back(y);
+                U.push_back(F.x());
+                V.push_back(F.y());
             }
+        }
+        for (size_t i = 0; i < X.size(); ++i) {
+            double x_start = X[i];
+            double y_start = Y[i];
+            double x_end = x_start + 0.1 * U[i];
+            double y_end = y_start + 0.1 * V[i];
+            std::vector<double> xs = {x_start, x_end};
+            std::vector<double> ys = {y_start, y_end};
+            plt::plot(xs, ys, {{"color", "#a6cee3"}});  // Light blue arrows
+            // Arrowhead
+            double arrow_len = 5.0;
+            double angle = std::atan2(V[i], U[i]);
+            double left_angle = angle + M_PI - M_PI / 6.0;
+            double right_angle = angle + M_PI + M_PI / 6.0;
+            double x_left = x_end + arrow_len * std::cos(left_angle);
+            double y_left = y_end + arrow_len * std::sin(left_angle);
+            double x_right = x_end + arrow_len * std::cos(right_angle);
+            double y_right = y_end + arrow_len * std::sin(right_angle);
+            plt::plot({x_end, x_left}, {y_end, y_left}, {{"color", "#a6cee3"}});
+            plt::plot({x_end, x_right}, {y_end, y_right}, {{"color", "#a6cee3"}});
+        }
+        // 2. Draw circle formation
+        std::vector<double> x_circle; // x coordinates of points around the formation circle
+        std::vector<double> y_circle; // y coordinates of points around the formation circle
+        const int num_points_circle = 100; // number of points to plot on the formation circle
+        for (int i = 0; i <= num_points_circle; ++i) {
+            double theta = 2.0 * M_PI * i / num_points_circle;
+            x_circle.push_back(formation_centre_x + formation_radius * std::cos(theta));
+            y_circle.push_back(formation_centre_x + formation_radius * std::sin(theta));
+        } 
+        plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
+        // 3. Draw vehicle paths in a darker color
+        for (size_t i = 0; i < swarm_size; ++i) {
+            plt::plot(x_paths[i], y_paths[i], {{"color", "#444444"}});  // Dark grey
+        }
+        // 4. Draw current vehicle positions on top
+        for (size_t i = 0; i < swarm_size; ++i) {
+            const ASVLite::Geometry::Coordinates3D pos = swarm[i].get_position();
+            std::string color = "black";
+            plt::plot({pos.keys.x}, {pos.keys.y}, {{"color", color}, {"marker", "o"}, {"markersize", "8"}});
+        }
+        // 5. Final layout and render
+        plt::xlim(axis_min, axis_max);
+        plt::ylim(axis_min, axis_max);
+        plt::axis("equal");
+        plt::tight_layout();
+        // Save to file or show once
+        std::filesystem::path formation_plot = results_dir / ("case_study" + std::to_string(wave_ht) + "_" + plot_file_name_subscript + ".png");
+        plt::save(formation_plot, 300);
+
+        for(int counter = 0; counter  < sea_state_update_frequency; ++counter) {
             // Compute the net artificial force
             Eigen::Matrix<double, swarm_size, 2> F_circle    = Eigen::Matrix<double, swarm_size, 2>::Zero(); // Artifical attractive force to circle
             Eigen::Matrix<double, swarm_size, 2> F_neighbour = Eigen::Matrix<double, swarm_size, 2>::Zero(); // Net artificial force due to neighbours that are within the radio range
@@ -414,7 +403,7 @@ int main() {
 
             // Compute the comms window for adjacent pairs of vehicles
             if (!run_animation) {
-                if(comms_update_counter == comms_update_frequency) {
+                if(counter % comms_update_frequency == 0.0) {
                     std::vector<std::future<std::pair<double, double>>> comms_window_futures;
                     for (size_t i = 0; i < swarm_size; ++i) {
                         comms_window_futures.push_back(std::async(std::launch::async, [=]() {
@@ -449,16 +438,12 @@ int main() {
                     // Write the values to the CSV file
                     const double min_comms_window = 100.0 - comms_window_losses[min_index];
                     results_file_swarm_adaptation_sim << wave_ht << "," << distances[min_index] << "," << min_comms_window << "\n";
-
-                    comms_update_counter = 0;
-                } else {
-                    ++comms_update_counter;
                 }
             }
             
             // Update Animation
             if(run_animation) {
-                if(animation_update_cycle_counter == animation_update_frequency){
+                if(counter % animation_update_frequency == 0.0){
                     plt::clf();  // Clear previous frame
                     // 1. Draw vector field in the background
                     std::vector<double> X, Y, U, V;
@@ -542,14 +527,10 @@ int main() {
                     plt::tight_layout();
                     plt::draw();
                     plt::pause(0.00001);
-
-                    animation_update_cycle_counter = 0;
-
-                } else {
-                    ++animation_update_cycle_counter;
-                }
+                } 
             }
-        }    
+        }
+  
     }
     results_file_swarm_adaptation_sim.close();
 

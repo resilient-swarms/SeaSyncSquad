@@ -283,8 +283,17 @@ sns.scatterplot(ax=axes[1], data=df_comms, x='Index', y='dist(m)',
 axes[1].set_xlabel('Simulation Time (minutes)')
 axes[1].set_ylabel('Max Inter-Vehicle Distance (m)')
 
+# Set x-axis major ticks at multiples of 30
+max_x = df_comms['Index'].max()
+x_ticks = np.arange(0, max_x + 30, 30)
+for ax in axes:
+    ax.set_xticks(x_ticks)
+    ax.grid(axis='x', which='major', linestyle='--', alpha=0.7)  # Only x-axis grid
+    ax.grid(axis='y', which='major', alpha=0)  # Remove y-axis grid
+
 # Final adjustments and save
 plt.tight_layout()
 plt.savefig(dir_results.joinpath("swarm_adaptation_sim.png"), dpi=300, bbox_inches='tight')
 plt.close()
+
 
