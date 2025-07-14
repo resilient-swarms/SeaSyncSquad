@@ -261,7 +261,7 @@ df_comms = pd.read_csv(dir_results.joinpath("swarm_adaptation_sim.csv"))
 df_comms['Index'] = 5 * df_comms.index
 
 # Define wave heights and ensure categorical ordering
-wave_hts = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0]
+wave_hts = [2.0, 3.0, 4.0, 5.0, 6.0]
 df_comms['wave_ht(m)'] = pd.Categorical(df_comms['wave_ht(m)'], categories=wave_hts, ordered=True)
 
 # Create subplots

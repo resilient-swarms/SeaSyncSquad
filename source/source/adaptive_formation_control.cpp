@@ -318,7 +318,7 @@ int main() {
                 // Compute desired vehicle heading w.r.t north
                 const double desired_heading = std::atan2(F_net.row(i).x(), F_net.row(i).y());  
                 // Halt the vehicle if the net force is below the threashold
-                if(F_circle.row(i).norm() <= proximity_threashold && F_neighbour.row(i).norm() <= 7 * proximity_threashold) {
+                if(F_circle.row(i).norm() <= proximity_threashold && F_neighbour.row(i).norm() <= proximity_threashold) {
                     swarm[i].set_surge_sway_halt(true);    
                 } else {
                     swarm[i].set_surge_sway_halt(false); 
@@ -432,7 +432,7 @@ int main() {
                 plt::plot(x_circle, y_circle, {{"color", "green"}, {"linestyle", "--"}});
                 // 3. Draw vehicle paths in a darker color
                 for (size_t i = 0; i < swarm_size; ++i) {
-                    plt::plot(x_paths[i], y_paths[i], {{"color", "#444444"}});  // Dark grey
+                    plt::plot(x_paths[i], y_paths[i], {{"color", "grey"}}); 
                 }
                 // 4. Draw current vehicle positions on top
                 for (size_t i = 0; i < swarm_size; ++i) {
