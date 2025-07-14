@@ -201,7 +201,6 @@ int main() {
     ASVLite::Geometry::Coordinates3D formation_center {formation_centre_x, formation_centre_y, 0.0};
     const double k_circle    = 1.0; // N/m
     const double k_neighbour = 1.0; // N/m
-    const double k_dismissal = 1.0; // N/m
 
     // Comms parameters
     const double required_comms_window = 70.0; // %
@@ -246,7 +245,7 @@ int main() {
     };
 
     // Init rudder controller
-    ASVLite::RudderController rudder_controller {asv_spec, {1.0, 1.0, 1.0}};
+    ASVLite::RudderController rudder_controller {asv_spec, {4.75, 0.0, 4.75}};
 
     // Initialise and deploy swarm
     const double antenna_height = 0.5; // m
