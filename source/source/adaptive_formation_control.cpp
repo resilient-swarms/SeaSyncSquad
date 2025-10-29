@@ -279,7 +279,9 @@ int main() {
     std::string plot_file_name_subscript = std::to_string(1);
     std::vector<double> wave_hts {2.0, 3.0, 4.0, 5.0, 6.0, 5.0, 4.0, 3.0, 2.0}; 
     double time = 0;
-    for(const double wave_ht : wave_hts) {
+    for(int i = 0; i < wave_hts.size(); ++i){
+    // for(const double wave_ht : wave_hts) {
+        double wave_ht = wave_hts[i];
         if(wave_ht == 6.0) {
             plot_file_name_subscript = std::to_string(2);
         }
@@ -290,8 +292,14 @@ int main() {
         }
         // Update formation_radius for the sea state
         // Get the new maximum allowable distance to maintain the required comms window
-        // double new_distance = get_max_allowable_distance(std::min(wave_ht+1.0, 6.0), required_comms_window);
-        double new_distance = get_max_allowable_distance(wave_ht, required_comms_window);
+        double max_wave_ht = wave_ht;
+        if(i < wave_hts.size() - 1) {
+            if(wave_hts[i+1] > max_wave_ht) {
+                max_wave_ht = wave_hts[i+1]; 
+            }
+        }
+        double new_distance = get_max_allowable_distance(max_wave_ht, required_comms_window);
+        // double new_distance = get_max_allowable_distance(wave_ht, required_comms_window);
         formation_radius = new_distance;
 
         for(int counter = 0; counter  < sea_state_update_frequency; ++counter) {
@@ -317,7 +325,7 @@ int main() {
                 // Compute desired vehicle heading w.r.t north
                 const double desired_heading = std::atan2(F_net.row(i).x(), F_net.row(i).y());  
                 // Halt the vehicle if the net force is below the threashold
-                if(F_circle.row(i).norm() <= proximity_threashold && F_neighbour.row(i).norm() <= proximity_threashold) {
+                if(F_circle.row(i).norm() <= proximity_threashold /*&& F_neighbour.row(i).norm() <= proximity_threashold*/) {
                     swarm[i].set_surge_sway_halt(true);    
                 } else {
                     swarm[i].set_surge_sway_halt(false); 
