@@ -1,5 +1,8 @@
 # SeaSyncSquad
 
+## Dependencies
+This repository depends on [ASVLite](https://github.com/resilient-swarms/ASVLite), included as a git submodule (`dependency/ASVLite`).
+
 ## Build instruction
 ``` 
 # Install conda and conda-forge
