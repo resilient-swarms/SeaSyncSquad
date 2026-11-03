@@ -1,71 +1,49 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.27)
-PROJECT(seasyncsquad)
+# cmake_minimum_required(VERSION 3.30)
+project(SeaSyncSquad)
 
-# ENABLE MULTI-THREADING
-# --------------------------------------
-OPTION(ENABLE_MULTI_THREADING "Enable multi-threading." ON) # Enabled by default
-IF(NOT ENABLE_MULTI_THREADING)
-    ADD_DEFINITIONS(-DDISABLE_MULTI_THREADING)
-    MESSAGE(STATUS "Multi-threading disabled.")
-ELSE()
-    MESSAGE(STATUS "Multi-threading enabled.")
-endif(NOT ENABLE_MULTI_THREADING)
+set(CMAKE_CXX_STANDARD 20)
 
-# ENABLE TIME SYNC WHILE MULTI-THREADING
-# --------------------------------------
-OPTION(ENABLE_TIME_SYNC "Enable time sync between parallel threads." ON) # Enable by default
-IF(ENABLE_MULTI_THREADING)
-    IF(ENABLE_TIME_SYNC)
-        ADD_DEFINITIONS(-DENABLE_TIME_SYNC)
-        MESSAGE(STATUS "Time sync between threads enabled.")
-    ELSE()
-        MESSAGE(STATUS "Time sync between threads disabled.")
-    ENDIF(ENABLE_TIME_SYNC)
-ENDIF(ENABLE_MULTI_THREADING)
-
-# INCLUDE HEADER FILES DIRECTORIES
-# --------------------------------
-INCLUDE_DIRECTORIES(
-        include
-        dependency/ASVLite/include
-        dependency/matplotlib-cpp        
+include_directories(
+        source/include
+        dependency/ASVLite/cpp_current/include
+        dependency/netcdf-cxx4/cxx4
+        dependency/matplotlib-cpp
 )
 
-# SOURCE FILES
-# ------------
-SET( SOURCE
-        source/main.cpp
-        source/simulate_LOS.cpp
-        dependency/ASVLite/source/errors.c
-        dependency/ASVLite/source/geometry.c
-        dependency/ASVLite/source/regular_wave.c
-        dependency/ASVLite/source/sea_surface.c
-        dependency/ASVLite/source/asv.c
+set( SOURCE
+        dependency/ASVLite/cpp_current/source/rudder_controller.cpp
+        # source/source/netcdf_rain.cpp 
+        # source/source/netcdf_wave.cpp 
+        # source/source/netcdf_wind.cpp 
+        # source/source/storm.cpp
+        # source/source/utils.cpp
+        source/source/radio_attenuation.cpp
+        source/source/icgs_swarm.cpp
+        source/source/icgs.cpp
+        # source/source/flux_asv.cpp
+        # source/source/main_icgs.cpp
+        # source/source/main_flux.cpp
+        source/source/adaptive_formation_control.cpp
+        # source/source/main_range_table.cpp
+        # source/source/temp.cpp
 )
 
-# PREPROCESSOR MACROS
-# -------------------
-IF(WIN32)
-    ADD_COMPILE_DEFINITIONS(WIN32)
-ENDIF()
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
 
-# CREATE BINARIES
-# ---------------
-ADD_EXECUTABLE(seasyncsquad ${SOURCE})
+add_subdirectory(dependency/matplotlib-cpp)
+# add_subdirectory(dependency/netcdf-cxx4)
 
-# LINK LIBRARIES
-# --------------
-FIND_PACKAGE(Threads REQUIRED)
-FIND_PACKAGE(Python3 COMPONENTS Interpreter Development REQUIRED)
-FIND_PACKAGE(Python3 COMPONENTS NumPy REQUIRED)
-FIND_PACKAGE(fmt REQUIRED)
+find_package(Threads REQUIRED)
+# find_package(GeographicLib REQUIRED)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS NumPy REQUIRED)
+find_package(Eigen3 REQUIRED NO_MODULE)
 
-SET(CMAKE_CXX_STANDARD 17)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-TARGET_LINK_LIBRARIES(seasyncsquad
-        m
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
         Threads::Threads
-        Python3::Python
-        Python3::Module
-        Python3::NumPy
-        fmt::fmt)
+        # ${GeographicLib_LIBRARIES}
+        # netcdf-cxx4
+        Python::Python
+        Python::Module
+        Python::NumPy
+        Eigen3::Eigen)

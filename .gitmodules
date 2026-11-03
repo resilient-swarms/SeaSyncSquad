@@ -7,3 +7,6 @@
 [submodule "dependency/StormExplorers"]
 	path = dependency/StormExplorers
 	url = git@github.com:resilient-swarms/StormExplorers.git
+[submodule "dependency/netcdf-cxx4"]
+	path = dependency/netcdf-cxx4
+	url = https://github.com/Unidata/netcdf-cxx4.git
